@@ -73,7 +73,7 @@ app.get('/TEST', function(req, res, next) {
 	var upload_folder = '업로드 폴더 경로';
 	//var file = upload_folder + req.body.file_name; // ex) /upload/files/sample.txt
 	
-	var	file = '../files/abc.txt';
+	var	file = './files/abc.txt';
 
 	try {
 	  if (fs.existsSync(file)) { // 파일이 존재하는지 체크
