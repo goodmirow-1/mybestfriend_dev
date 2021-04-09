@@ -4,6 +4,9 @@ const bodyParser = require('body-parser');			//Json으로 데이터 통신 Modul
 const helmet = require('helmet');				//http 보안관련 Module
 const multer = require('multer');				//파일 저장용 Moudle
 
+const formidable = require('formidable');
+const fs_extra = require('fs-extra');
+
 const models = require("./models/index.js");
 const fs = require('fs');
 const path = require('path');
@@ -78,60 +81,54 @@ function shutDown() {
 
 var storage = multer.diskStorage({
 	destination(req, file, cb) {
-		cb(null, 'uploadedFiles/');
+		cb(null, 'files/');
 	},
 	filename(req, file, cb) {
 		cb(null, `${Date.now()}__${file.originalname}`);
 	}
 });
 
-var upload = multer({ dest: 'uploadedFiles/'});
+var upload = multer({ dest: 'files/'});
 var uploadWithOriginalFilename = multer({ storage : storage});
 
-app.get('/FILE_TEST', function(req, res, next) {
-	var upload_folder = '업로드 폴더 경로';
-	//var file = upload_folder + req.body.file_name; // ex) /upload/files/sample.txt
+app.post('/file_upload', function(req, res, next) {
+    var fields = new Map();
+    var fields_array = []; //배열에 저장해서 넘기기
+    // 텍스트 값
+    var files = [];
+    var files_array = []; //배열에 저장해서 넘기기
+	// 이미지 파일
 	
-	var	file = './files/up.ino.bin';
+	var form = new formidable.IncomingForm();
+	form.encoding = 'utf-8';
+	form.uploadDir = __dirname + "/files";
 
-	try {
-	  if (fs.existsSync(file)) { // 파일이 존재하는지 체크
-		var filename = path.basename(file); // 파일 경로에서 파일명(확장자포함)만 추출
-		var mimetype = mime.lookup(file); // 파일의 타입(형식)을 가져옴
-	  
-		res.setHeader('Content-disposition', 'attachment; filename=' + filename); // 다운받아질 파일명 설정
-		res.setHeader('Content-type', mimetype); // 파일 형식 지정
-	  
-		var filestream = fs.createReadStream(file);
-		filestream.pipe(res);
-	  } else {
-		res.send('해당 파일이 없습니다.');  
-		return;
-	  }
-	} catch (e) { // 에러 발생시
-	  console.log(e);
-	  res.send('파일을 다운로드하는 중에 에러가 발생하였습니다.');
-	  return;
-	}
-  });
+    form.on('field', function (field, value) { //값 하나당 한번씩 돌아가므로,
+		console.log(field);
+		fields.set(field, value);
+		fields_array.push(value); //값 순서대로 배열에 쌓아준다.
+	  });
+	
+	  form.on('file', function (field, file) {
+		files.push([field, file.name]);
+		console.log("what is file name in form.on file", file.name);
+		files_array.push(file);
+	  }).on('end', function() {
+		console.log("file upload done");
+		for(var i = 0 ; i < files_array.length; ++i){
+			if (i < files_array.length) {
+				fs_extra.rename(files_array[i].path, './files/' + files_array[i].name); //파일 앞서 만든 폴더에 저장
+			 
+			}
+		}
 
-
-app.get('/UploadPage', function(req,res){
-  res.render('upload');
-});
-
-app.post('/uploadFile', upload.single('attachment'), function(req,res){ // 4 
-  res.render('confirmation', { file:req.file, files:null });
-});
-
-app.post('/uploadFileWithOriginalFilename', uploadWithOriginalFilename.single('attachment'), function(req,res){ // 5
-  res.render('confirmation', { file:req.file, files:null });
-});
-
-app.post('/uploadFiles', upload.array('attachments'), function(req,res){ // 6
-  res.render('confirmation', { file: null, files:req.files} );
-});
-
-app.post('/uploadFilesWithOriginalFilename', uploadWithOriginalFilename.array('attachments'), function(req,res){ // 7
-  res.render('confirmation', { file:null, files:req.files });
+		res.json(files_array[0]);
+	  }).on('error', function (err) { //에러나면, 파일저장 진행된 id 값의 폴더 하위부분을 날려버릴까?
+        res.json(null);
+	});
+	
+	form.parse(req, function (error, field, file) { 
+		console.log('[parse()] error : ' + error + ', field : ' + field + ', file : ' + file);
+		console.log('upload success');
+	  });
 });
