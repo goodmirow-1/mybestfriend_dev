@@ -2,14 +2,18 @@ const express = require('express');
 const methodOverride = require('method-override');		//Post,Delete,Update 관련 Module
 const bodyParser = require('body-parser');			//Json으로 데이터 통신 Module
 const helmet = require('helmet');				//http 보안관련 Module
+const multer = require('multer');				//파일 저장용 Moudle
 
 const models = require("./models/index.js");
 const fs = require('fs');
 const path = require('path');
 const mime = require('mime');
+const expressEjsLayout = require('express-ejs-layouts');
 
 const app = express();
 
+app.set('view engine', 'ejs');
+app.use(expressEjsLayout);
 app.use(methodOverride('_method'));
 
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -19,8 +23,11 @@ app.use(helmet());
 
 app.set('port', process.argv[2] || process.env.PORT || 50000);
 const server = app.listen(app.get('port'), () => {
-	console.log('Express server listening on port ' + app.get('port'));
 
+	var dir = './uploadedFiles';
+	if(!fs.existsSync(dir)) fs.mkdirSync(dir);	//업로드 폴더 유무 확인;
+
+	console.log('Express server listening on port ' + app.get('port'));
 });
 
 // sequelize 연동
@@ -69,6 +76,18 @@ function shutDown() {
 	}, 10000);
 }
 
+var storage = multer.diskStorage({
+	destination(req, file, cb) {
+		cb(null, 'uploadedFiles/');
+	},
+	filename(req, file, cb) {
+		cb(null, `${Date.now()}__${file.originalname}`);
+	}
+});
+
+var upload = multer({ dest: 'uploadedFiles/'});
+var uploadWithOriginalFilename = multer({ storage : storage});
+
 app.get('/FILE_TEST', function(req, res, next) {
 	var upload_folder = '업로드 폴더 경로';
 	//var file = upload_folder + req.body.file_name; // ex) /upload/files/sample.txt
@@ -95,3 +114,24 @@ app.get('/FILE_TEST', function(req, res, next) {
 	  return;
 	}
   });
+
+
+app.get('/UploadPage', function(req,res){
+  res.render('upload');
+});
+
+app.post('/uploadFile', upload.single('attachment'), function(req,res){ // 4 
+  res.render('confirmation', { file:req.file, files:null });
+});
+
+app.post('/uploadFileWithOriginalFilename', uploadWithOriginalFilename.single('attachment'), function(req,res){ // 5
+  res.render('confirmation', { file:req.file, files:null });
+});
+
+app.post('/uploadFiles', upload.array('attachments'), function(req,res){ // 6
+  res.render('confirmation', { file: null, files:req.files} );
+});
+
+app.post('/uploadFilesWithOriginalFilename', uploadWithOriginalFilename.array('attachments'), function(req,res){ // 7
+  res.render('confirmation', { file:null, files:req.files });
+});
