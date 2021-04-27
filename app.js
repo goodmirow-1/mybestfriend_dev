@@ -135,6 +135,8 @@ app.post('/file_upload', function(req, res, next) {
 	  });
 });
 
+let sendDataList = [];
+
 app.post('/Send/Data', function(req, res) {
 	let body = req.body; 
 
@@ -143,6 +145,11 @@ app.post('/Send/Data', function(req, res) {
 		res.json({"msg" : "NO"});
 	}else{
 		console.log(body);
+		sendDataList.push(body);
 		res.json({"msg" : "OK"});
 	}
+});
+
+app.get('/Get/Data', function(req, res) {
+	res.json(sendDataList);
 });
