@@ -13,6 +13,8 @@ const path = require('path');
 const mime = require('mime');
 const expressEjsLayout = require('express-ejs-layouts');
 
+const globalRouter = require('./routes/global');
+
 const app = express();
 
 app.set('view engine', 'ejs');
@@ -131,4 +133,16 @@ app.post('/file_upload', function(req, res, next) {
 		console.log('[parse()] error : ' + error + ', field : ' + field + ', file : ' + file);
 		console.log('upload success');
 	  });
+});
+
+app.post('/Send/Data', function(req, res) {
+	let body = req.body; 
+
+	if(globalRouter.IsEmpty( JSON.stringify(body))){
+		console.log('/Send/Data is empty');
+		res.json({"msg" : "NO"});
+	}else{
+		console.log(body);
+		res.json({"msg" : "OK"});
+	}
 });
