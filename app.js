@@ -71,7 +71,7 @@ function shutDown() {
 
 	console.log('Received kill signal, shutting down gracefully');
 	server.close(() => {
-		console.log('Closed out rmaining connections');
+		console.log('Closed out remaining connections');
 		process.exit(0);
 	});
 
@@ -152,4 +152,26 @@ app.post('/Send/Data', function(req, res) {
 
 app.get('/Get/Data', function(req, res) {
 	res.json(sendDataList);
+});
+
+let version =  "v0.1";
+
+app.post('/Check/Version', function(req, res) {
+	if(globalRouter.IsEmpty( req.body.uuid )){
+		console.log('/Check/Living is empty');
+		res.json({"msg" : "EMPTY"});
+	}else{
+		console.log(req.body.uuid);
+
+		fs.readFile(__dirname + "/files" + "/version.txt", 'utf-8', function(err, data) {
+			if(err){
+				console.log(err);
+				res.json({"msg" : "version.txt file is wrong"});
+				return;
+			}else{
+				console.log(data);
+				res.json({"msg" : version});
+			}
+		})
+	}
 });
