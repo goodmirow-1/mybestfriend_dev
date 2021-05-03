@@ -170,7 +170,7 @@ app.post('/Check/Version', function(req, res) {
 				return;
 			}else{
 				console.log(data);
-				res.json({"msg" : version});
+				res.json({"msg" : data});
 			}
 		})
 	}
