@@ -17,6 +17,10 @@ const globalRouter = require('./routes/global');
 
 const app = express();
 
+var moment = require('moment');
+require('moment-timezone');
+moment.tz.setDefault("Asia/Seoul");
+
 app.set('view engine', 'ejs');
 app.use(expressEjsLayout);
 app.use(methodOverride('_method'));
@@ -144,14 +148,22 @@ app.post('/Send/Data', function(req, res) {
 		console.log('/Send/Data is empty');
 		res.json({"msg" : "NO"});
 	}else{
+
+		var data = {
+			ID : body.ID,
+			Weight : body.Weight,
+			Wobble : body.Wobble,
+			Time : moment().format('YYYY-MM-DD HH:mm:ss')
+		  };
+
 		console.log(body);
-		sendDataList.push(body);
+		sendDataList.push(data);
 		res.json({"msg" : "OK"});
 	}
 });
 
 app.get('/Get/Data', function(req, res) {
-	res.json(sendDataList);
+	res.json(sendDataList.reverse());
 });
 
 let version =  "v0.1";
