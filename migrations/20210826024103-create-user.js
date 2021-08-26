@@ -27,6 +27,9 @@ module.exports = {
       Information: {
         type: Sequelize.STRING
       },
+      RealName: {
+        type: Sequelize.STRING
+      },
       PhoneNumber: {
         type: Sequelize.STRING
       },

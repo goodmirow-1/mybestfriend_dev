@@ -13,7 +13,9 @@
     "body-parser": "^1.19.0",
     "case-insensitive": "^1.0.0",
     "connect-multiparty": "^2.2.0",
-    "connect-redis": "^5.1.0",
+    "connect-redis": "^5.2.0",
+    "crypto": "^1.0.1",
+    "date-utils": "^1.2.21",
     "ejs": "^3.1.6",
     "express": "^4.17.1",
     "express-ejs-layouts": "^2.5.0",
@@ -32,11 +34,13 @@
     "mysql": "^2.18.1",
     "mysql2": "^2.2.5",
     "path": "^0.12.7",
-    "redis": "^3.0.2",
+    "redis": "^3.1.2",
     "sequelize": "^6.5.1",
     "sequelize-cli": "^6.2.0",
-    "sharp": "^0.27.2",
+    "sharp": "^0.29.0",
+    "underscore": "^1.13.1",
     "util": "^0.12.3",
+    "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.1"
   }
 }
