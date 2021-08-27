@@ -13,6 +13,13 @@ const path = require('path');
 const mime = require('mime');
 const expressEjsLayout = require('express-ejs-layouts');
 
+const userRouter = require('./routes/user/userRouter'),
+		petRouter = require('./routes/pet/petRouter'),
+		notifcationRouter = require('./routes/notification/notificationRouter'),
+		fcmRouter = require('./routes/fcm/fcmRouter'),
+		communityPostRouter = require('./routes/communitypost/communityPostRouter'),
+		bowlRouter = require('./routes/bowl/bowlRouter');
+
 const globalRouter = require('./routes/global');
 
 const app = express();
@@ -29,6 +36,13 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static(__dirname));
 app.use(helmet());
+
+app.use('/User', userRouter);
+app.use('/Pet', petRouter);
+app.use('/Notification', notifcationRouter);
+app.use('/Fcm', fcmRouter);
+app.use('/CommunityPost', communityPostRouter);
+app.use('/Bowl', bowlRouter);
 
 app.set('port', process.argv[2] || process.env.PORT || 50000);
 const server = app.listen(app.get('port'), () => {
