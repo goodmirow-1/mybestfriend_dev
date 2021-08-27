@@ -16,7 +16,7 @@ const expressEjsLayout = require('express-ejs-layouts');
 const userRouter = require('./routes/user/userRouter'),
 		petRouter = require('./routes/pet/petRouter'),
 		notifcationRouter = require('./routes/notification/notificationRouter'),
-		fcmRouter = require('./routes/fcm/fcmRouter'),
+		//fcmRouter = require('./routes/fcm/fcmRouter'),
 		communityPostRouter = require('./routes/communitypost/communityPostRouter'),
 		bowlRouter = require('./routes/bowl/bowlRouter');
 
@@ -40,11 +40,11 @@ app.use(helmet());
 app.use('/User', userRouter);
 app.use('/Pet', petRouter);
 app.use('/Notification', notifcationRouter);
-app.use('/Fcm', fcmRouter);
+//app.use('/Fcm', fcmRouter);
 app.use('/CommunityPost', communityPostRouter);
 app.use('/Bowl', bowlRouter);
 
-app.set('port', process.argv[2] || process.env.PORT || 50000);
+app.set('port', process.argv[2] || process.env.PORT || 50007);
 const server = app.listen(app.get('port'), () => {
 
 	var dir = './uploadedFiles';

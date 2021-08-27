@@ -2,10 +2,10 @@ const router = require('express').Router(),
         models = require('../../models'),
         globalRouter = require('../global');
 
-const config = require('../config/configure'); //for secret data
+const config = require('../../config/configure'); //for secret data
 const crypto = require('crypto');
-const tokenController = require('../controllers/tokenInfo');
-const passwordController = require('../controllers/encryptpwd');
+const tokenController = require('../../controllers/tokenInfo');
+const passwordController = require('../../controllers/encryptpwd');
 const moment = require('moment');
 
 require('moment-timezone');
