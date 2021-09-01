@@ -1,39 +1,72 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class User extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
-    static associate(models) {
-      // define association here
-      this.hasMany(models.Pet, {
-        foreignKey: 'UserID'
-      });
-    }
+  var User = sequelize.define('User', {
+    UserID: {
+      allowNull: false,
+      autoIncrement: true,
+      primaryKey: true,
+      type: DataTypes.INTEGER
+    },
+    Email: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    LoginType: {
+      type : DataTypes.INTEGER,
+      allowNull: true,
+    },
+    Password: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    NickName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    Location: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    RealName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    PhoneNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    ProfileURL:{
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    Sex: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true
+    },
+    RefreshToken: {
+      type: DataTypes.STRING(400),
+      allowNull: true,
+      defaultValue: "0"
+    },
+    MarketingAgree: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: "1"
+    },
+    MarketingAgreeTime: {
+      type: DataTypes.STRING(20),
+      allowNull: true
+    },
+    LoginState: {
+      type : DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: "0"
+    },
+  }, {});
+  User.associate = function (models) {
+    this.hasMany(models.Pet, {
+      foreignKey: 'UserID'
+    });
   };
-  User.init({
-    Email: DataTypes.STRING,
-    Password: DataTypes.STRING,
-    LoginType: DataTypes.INTEGER,
-    NickName: DataTypes.STRING,
-    Location: DataTypes.STRING,
-    Information: DataTypes.STRING,
-    RealName: DataTypes.STRING,
-    PhoneNumber: DataTypes.STRING,
-    ProfileURL: DataTypes.STRING,
-    Sex: DataTypes.BOOLEAN,
-    MarketingAgree: DataTypes.BOOLEAN,
-    MarketingAgreeTime: DataTypes.STRING,
-    LoginState: DataTypes.INTEGER,
-    RefreshToken: DataTypes.STRING
-  }, {
-    sequelize,
-    modelName: 'User',
-  });
   return User;
 };

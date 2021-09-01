@@ -16,10 +16,12 @@ module.exports = {
         },
       },
       Index: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue : 0
       },
       Type: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue : 0
       },
       Name: {
         type: Sequelize.STRING
@@ -37,10 +39,12 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       Disease: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        defaultValue : ''
       },
       Allergy: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        defaultValue : ''
       },
       createdAt: {
         allowNull: false,

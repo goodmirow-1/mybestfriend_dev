@@ -1,0 +1,6 @@
+2021-08-31 17:09:28 error: /Pet/Modify Pet update Failed ReferenceError: add_id_values is not defined
+2021-08-31 17:11:40 error: /Pet/Modify Pet update Failed TypeError: Date.Now is not a function
+2021-08-31 17:17:42 error: /Pet/Modify Pet update Failed TypeError: Cannot read property 'split' of undefined
+2021-08-31 18:16:37 error: /Pet/Modify Pet update Failed TypeError [ERR_INVALID_CALLBACK]: Callback must be a function. Received undefined
+2021-08-31 18:17:32 error: /Pet/Modify Pet update Failed TypeError [ERR_INVALID_CALLBACK]: Callback must be a function. Received 'r'
+2021-08-31 18:20:08 error: /Pet/Modify Pet update Failed ReferenceError: index is not defined
