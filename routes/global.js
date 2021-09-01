@@ -1,7 +1,6 @@
 
 const fs = require('fs'),
 moment = require('moment'),
-sharp = require('sharp'),
 path = require('path');
 
 const { isEmpty } = require('underscore');
@@ -72,17 +71,6 @@ function getImgMime(x) {
 	return mime;
 }
 
-function realSharping(result_id, Destination, i, files_array_name, size, pWidth, pHeight, qualityNum, mimetype) { //Destination ; '/../원하는폴더명/' ex) '/../CommunityPhotos/'
-
-sharp(__dirname + Destination + result_id + "/" + (i + 1) + "/" + files_array_name).rotate().
-resize({
-	fit : sharp.fit.contain,
-	width : Math.round(pWidth),
-	height : Math.round(pHeight)
-}).jpeg({ quality: qualityNum }).toFile(__dirname + Destination + result_id + "/" + (i + 1) + "/" + getfilename(files_array_name) + "_" + size + "." + mimetype);
-}
-
-
 //디렉토리랑 mime type 까지 싹다 인자로 받기
 const removePath = (p, callback) => { // A 
 	fs.stat(p, (err, stats) => { 
@@ -148,7 +136,6 @@ module.exports.CreateOrDestroy = CreateOrDestroy;
 module.exports.makeFolder = makeFolder;
 module.exports.getfilename = getfilename;
 module.exports.getImgMime = getImgMime;
-module.exports.realSharping = realSharping;
 module.exports.removefiles = removefiles;
 module.exports.IsEmpty = IsEmpty;
 
