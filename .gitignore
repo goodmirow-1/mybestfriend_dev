@@ -1,7 +1,8 @@
-AllPhotos
-config
-files
-keys
-logs
-node_modules
-
+AllPhotos/
+config/
+files/
+keys/
+logs/
+node_modules/
+package-lock.json
+package.json

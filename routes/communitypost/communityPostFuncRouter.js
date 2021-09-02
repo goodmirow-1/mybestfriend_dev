@@ -5,7 +5,7 @@ const router = require('express').Router(),
 
 module.exports = {
         SelectByID : async function SelectByID( communityID ) {
-                return new Promise((resolv, reject) => {
+                return new Promise(async (resolv, reject) => {
                         await models.CommunityPost.findOne({
                                 include: [
                                         { 
