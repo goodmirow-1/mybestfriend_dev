@@ -19,7 +19,7 @@ module.exports = {
         type: Sequelize.INTEGER,
         defaultValue: 0
       },
-      ProfileURL: {
+      ImageURL: {
         type: Sequelize.STRING
       },
       createdAt: {

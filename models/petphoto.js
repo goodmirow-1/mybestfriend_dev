@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
   PetPhoto.init({
     PetID: DataTypes.INTEGER,
     Index: DataTypes.INTEGER,
-    ProfileURL: DataTypes.STRING
+    ImageURL: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'PetPhoto',

@@ -5,10 +5,10 @@ const router = require('express').Router(),
 
 const client = globalRouter.client;
 
-var serviceAccount = require("../../keys/sheeps-app-c8bba-firebase-adminsdk-wih06-9cccc8994b.json");
+var serviceAccount = require("../../keys/myvef-bowl-firebase-adminsdk-lmhrd-25e0fa3d39.json");
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://sheeps-app-c8bba.firebaseio.com"
+    databaseURL: "https://myvef-bowl.firebaseio.com"
 });
 
 let URL = '/Fcm';

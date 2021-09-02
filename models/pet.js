@@ -16,10 +16,10 @@ module.exports = (sequelize, DataTypes) => {
         onDelete : "cascade",
       });
       this.hasMany(models.PetPhoto, {
-        foreignKey: 'id'
+        foreignKey: 'PetID'
       });
       this.hasMany(models.BowlDevice, {
-        foreignKey: 'id'
+        foreignKey: 'PetID'
       })
     }
   };

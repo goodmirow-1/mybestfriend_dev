@@ -1,5 +1,6 @@
 const router = require('express').Router(),
         models = require('../../models'),
+        formidable = require('formidable'),
         globalRouter = require('../global');
 
 const config = require('../../config/configure'); //for secret data
@@ -10,6 +11,9 @@ const moment = require('moment');
 
 require('moment-timezone');
 moment.tz.setDefault("Asia/Seoul");
+
+const s3Multer = require('../multer');
+const userFuncRouter = require('./userFuncRouter');
 
 const client = globalRouter.client;
 
@@ -44,37 +48,58 @@ router.post('/IDCheck', async (req, res) => {
     })
 });
 
+router.post('/PhoneCheck', async(req, res) => {
+    if (globalRouter.IsEmpty(req.body.name)) {
+        console.log('empty name error');
+        res.status(400).send(null);
+        return;
+    }
+
+    await models.User.findOne({
+        where : {
+            RealName : req.body.name,
+            PhoneNumber : req.body.phoneNumber
+        }
+    }).then(result => {
+        console.log(URL + '/PhoneCheck findOne success');
+        res.status(200).send(result);
+    }).catch(err => {
+        globalRouter.logger.error(URL + '/PhoneCheck findOne is Failed' + err);
+        res.status(400).send(null);
+    })
+})
+
 router.post('/Insert', async(req,res) => {
     if(globalRouter.IsEmpty(req.body.email) || globalRouter.IsEmpty(req.body.password)){
         console.log('empty id or pwd error');
         res.status(400).send(null);
     }else{
-        const hashedPwd = crypto.createHmac('sha256', config.pwdsecret).update(body.password).digest('base64');
-        const marketingAgreeTime = body.marketingAgree == 1 ? moment().format('YYYY-MM-DD HH:mm:ss') : null;
+        const hashedPwd = crypto.createHmac('sha256', config.pwdsecret).update(req.body.password).digest('base64');
+        const marketingAgreeTime = req.body.marketingAgree == 1 ? moment().format('YYYY-MM-DD HH:mm:ss') : null;
 
-        await models.user.findOrCreate({
+        await models.User.findOrCreate({
             where: {
                 Email : req.body.email
             },
             defaults: {
                 Email : req.body.email,
-                Name: body.name,
+                RealName: req.body.name,
                 Password: hashedPwd,
-                MarketingAgree: body.marketingAgree,
+                PhoneNumber : req.body.phoneNumber,
+                MarketingAgree: req.body.marketingAgree,
                 MarketingAgreeTime: marketingAgreeTime
             }
         }).then(async function  (result) {
             if (result[1]) { 
                 console.log('user register success');
         
-                globalRouter.makeFolder('ProfilePhotos/' + result[0].UserID)
                 client.hmset(String(result[0].UserID), {
                     "socketID" : 0,
                     "isOnline" : 0,
                     "roomStatus" : 0
                 });
 
-                res.status(200).send(result);
+                res.status(200).send(result[0]);
             } else { //만약 이미 있는 회원 아이디이면 result[1] == false 임
                 console.log('already member');
                 res.status(400).send(false);
@@ -283,7 +308,7 @@ router.post('/Login/Social', async(req, res) => {
     }
 })
 
-router.post('/Edit', async(req, res) => {
+router.post('/Edit/Password', async(req, res) => {
     const newhashedPwd = passwordController.getHashedPassword(req.body.newpassword);
     const hashedPwd = passwordController.getHashedPassword(req.body.password);
 
@@ -341,6 +366,96 @@ router.post('/Edit', async(req, res) => {
         console.log('new password findOne failed', err);
         res.status(200).send(false);
       });
+})
+
+router.post('/Edit/ProfileInfo', async(req,res) => {
+    console.log(URL + '/Edit/ProfileInfo Do');
+
+    var fields = new Map();
+
+    var files = [];
+
+    var form = new formidable.IncomingForm();
+
+    form.encoding = 'utf-8';
+    form.uploadDir = './AllPhotos/Temp';
+    form.multiples = true;
+    form.keepExtensions = true;
+  
+    form.on('field', function (field, value) { //값 하나당 한번씩 돌아가므로,
+      console.log(field);
+      fields.set(field, value);
+    });
+
+    form.on('file', function (field, file) {
+        if(field == 'images') files.push(file);
+        else console.log('this file has no fieldname');
+    }).on('end', async function() {
+
+        var selectUser = await userFuncRouter.SelectByUserID(fields.get('userID'));
+
+        if(globalRouter.IsEmpty(selectUser)){
+            console.log(URL + '/Edit/ProfileInfo User is Empty');
+            res.status(200).send(null);
+        }else{
+            await selectUser.update(
+                {
+                    NickName : fields.get('nickname'),
+                    Location : fields.get('location'),
+                    Information : fields.get('information'),
+                    Sex : fields.get('sex'),
+                }
+            ).then(updateResult => {
+                console.log(URL + '/Edit/ProfileInfo User data is update success');
+            }).catch(err => {
+                globalRouter.logger.error(URL + '/Edit/ProfileInfo User data update Failed ' + err);
+            })
+
+            if(fields.get('isDeleteImage') == 1){
+                console.log(URL + '/Edit/ProfileInfo Image Delete Call');
+                s3Multer.fileDelete('ProfilePhotos/' + fields.get('userID'), selectUser.ProfileURL);
+
+                await selectUser.update(
+                    {
+                        ProfileURL : ''
+                    }
+                ).then(updateResult => {
+                    console.log(URL + "/Edit/ProfileInfo User ProfileImage data is update success");
+                }).catch(err => {
+                    globalRouter.logger.error(URL + '/Edit/ProfileInfo User ProfileImage data update Failed ' + err);
+                })
+            }else{
+                if(files.length != 0){
+                    var fileName = Date.now() + '.' + files[0].name.split('.').pop();
+        
+                    s3Multer.formidableFileUpload(files[0], 'ProfilePhotos/' + fields.get('userID') + '/' + fileName);
+
+                    await selectUser.update(
+                        {
+                            ProfileURL : fileName
+                        }
+                    ).then(updateResult => {
+                        console.log(URL + "/Edit/ProfileInfo User ProfileImage data is update success");
+                    }).catch(err => {
+                        globalRouter.logger.error(URL + '/Edit/ProfileInfo User ProfileImage data update Failed ' + err);
+                    })
+                }
+            }
+
+            res.status(200).send(await userFuncRouter.SelectByUserID(fields.get('userID')));
+        }
+    }).on('error', function (err) { //에러나면, 파일저장 진행된 id 값의 폴더 하위부분을 날려버릴까?
+        globalRouter.logger.error('[error] error ' + err);
+        globalRouter.removefiles('./AllPhotos/Temp/');
+        res.status(400).send(null);
+    });
+
+    //end 이벤트까지 전송되고 나면 최종적으로 호출되는 부분
+    //임시 폴더 삭제는 주기적으로 한번씩 삭제가 필요함 언제할지는 의문.
+    form.parse(req, function (error, field, file) {
+            console.log('[parse()] error : ' + error + ', field : ' + field + ', file : ' + file);
+            console.log(URL + '/modify success');
+    });
 })
 
 module.exports = router;

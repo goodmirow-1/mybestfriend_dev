@@ -72,35 +72,38 @@ function getImgMime(x) {
 }
 
 //디렉토리랑 mime type 까지 싹다 인자로 받기
+const removePath = (p, callback) => { // A 
+	fs.stat(p, (err, stats) => { 
+	  if (err) return callback(err);
+  
+	  if (!stats.isDirectory()) { // B 
+		console.log('이 경로는 파일');
+		return fs.unlink(p, err => err ? callback(err) : callback(null, p));
+	  }
+  
+	  console.log('이 경로는 폴더');  // C 
+	  fs.rmdir(p, (err) => {  
+		if (err) return callback(err);
+  
+		return callback(null, p);
+	  });
+	});
+  };
 
-async function removefiles(x) {
-return new Promise(resolve => {
-	x.forEach(f => { //폴더 경로마다
-		fs.readdir(f, function (err, files) { //폴더내의 파일마다
-			if (err) {
-				console.log(err);
-			} else {
+const printResult = (err, result) => {
+	if (err) return console.log(err);
 
-				if (files.length == 0) {
-					console.log("folder is already empty")
-					resolve('good');
-				}
-				else { //파일 있으면
-					files.forEach(ff => { //파일마다
-						fs.unlink(path.join(f, ff), function (err) {
-							if (err) {
-								console.log('err:', err)
-								throw err;
-							}
-							console.log('file deleted');
-							resolve('good');
-						});
-					})
-				}
-			}
-		})
-	})
-});
+	console.log(`${result} 를 정상적으로 삭제했습니다`);
+};
+
+function removefiles(p) {
+	try { // D
+		const files = fs.readdirSync(p);  
+		if (files.length) 
+		  files.forEach(f => removePath(path.join(p, f), printResult)); 
+	} catch (err) {
+	if (err) return console.log(err);
+	}	  
 }
 
 function getWordLen(x) { //검색 필터 단어 나누는 용
