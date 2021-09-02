@@ -400,7 +400,7 @@ router.post('/Edit/ProfileInfo', async(req,res) => {
         }else{
             await selectUser.update(
                 {
-                    NickName : fields.get('nickname'),
+                    NickName : fields.get('nickName'),
                     Location : fields.get('location'),
                     Information : fields.get('information'),
                     Sex : fields.get('sex'),
@@ -454,7 +454,7 @@ router.post('/Edit/ProfileInfo', async(req,res) => {
     //임시 폴더 삭제는 주기적으로 한번씩 삭제가 필요함 언제할지는 의문.
     form.parse(req, function (error, field, file) {
             console.log('[parse()] error : ' + error + ', field : ' + field + ', file : ' + file);
-            console.log(URL + '/modify success');
+            console.log(URL + '/Edit/ProfileInfo success');
     });
 })
 

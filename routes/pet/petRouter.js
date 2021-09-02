@@ -68,7 +68,9 @@ router.post('/InsertOrModify', async(req, res) => {     //펫 수정
                 else console.log('this file has no fieldname');
         }).on('end', async function() {
 
-                if(fields.get('isCreate') == true){
+                if(fields.get('isCreate') == 1){
+                        console.log(URL + '/InsertOrModify create flow');
+
                         await models.Pet.create(
                                 {
                                         UserID : fields.get('userID'),
