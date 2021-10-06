@@ -39,8 +39,11 @@ module.exports = (sequelize, DataTypes) => {
     ImageURL1: DataTypes.STRING,
     ImageURL2: DataTypes.STRING,
     ImageURL3: DataTypes.STRING,
-    IsShow: DataTypes.BOOLEAN,
-    Type: DataTypes.INTEGER
+    PetType: DataTypes.STRING,
+    Type: DataTypes.INTEGER,
+    Point: DataTypes.INTEGER,
+    RegisterTime: DataTypes.DATE,
+    IsShow: DataTypes.BOOLEAN
   }, {
     sequelize,
     modelName: 'CommunityPost',

@@ -23,7 +23,8 @@ module.exports = {
         type: Sequelize.STRING
       },
       IsShow: {
-        type: Sequelize.BOOLEAN
+        type: Sequelize.BOOLEAN,
+        defaultValue : true
       },
       createdAt: {
         allowNull: false,

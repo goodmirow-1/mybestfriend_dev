@@ -23,7 +23,8 @@ module.exports = (sequelize, DataTypes) => {
     Analysis: DataTypes.BOOLEAN,
     Advice: DataTypes.BOOLEAN,
     Community: DataTypes.BOOLEAN,
-    Marketing: DataTypes.BOOLEAN
+    Marketing: DataTypes.BOOLEAN,
+    BadgeCount: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'FcmTokenList',

@@ -18,7 +18,10 @@ module.exports = (sequelize, DataTypes) => {
       this.hasMany(models.PetPhoto, {
         foreignKey: 'PetID'
       });
-      this.hasMany(models.BowlDevice, {
+      this.hasMany(models.BowlDeviceTable, {
+        foreignKey: 'PetID'
+      })
+      this.hasMany(models.Intake, {
         foreignKey: 'PetID'
       })
     }
@@ -33,7 +36,8 @@ module.exports = (sequelize, DataTypes) => {
     Weight: DataTypes.DOUBLE,
     Sex: DataTypes.INTEGER,
     Disease: DataTypes.STRING,
-    Allergy: DataTypes.STRING
+    Allergy: DataTypes.STRING,
+    FoodID: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'Pet',

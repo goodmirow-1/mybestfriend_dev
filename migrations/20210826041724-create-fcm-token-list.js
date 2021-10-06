@@ -38,6 +38,10 @@ module.exports = {
         type: Sequelize.BOOLEAN,
         defaultValue : true
       },
+      BadgeCount: {
+        type: Sequelize.INTEGER,
+        defaultValue : 0
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE

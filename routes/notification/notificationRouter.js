@@ -10,12 +10,12 @@ router.post('/UnSendSelect', async (req, res) => {
     await models.NotificationList.findAll({
         where : {
             TargetID : req.body.userID,
-            isSend : 0
+            IsSend : 0
         }    
     }).then(result => {
 
         let value = {
-            isSend : 1,
+            IsSend : 1,
         }
 
         for(let i = 0 ; i < result.length; ++i){

@@ -24,6 +24,10 @@ module.exports = {
       UUID: {
         type: Sequelize.STRING
       },
+      TableIndex: {
+        type: Sequelize.INTEGER,
+        defaultValue : 0
+      },
       IsSend: {
         type: Sequelize.BOOLEAN
       },

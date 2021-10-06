@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const mime = require('mime');
 const expressEjsLayout = require('express-ejs-layouts');
+const schedule = require('node-schedule');
 
 const userRouter = require('./routes/user/userRouter'),
 		petRouter = require('./routes/pet/petRouter'),
@@ -25,6 +26,7 @@ const globalRouter = require('./routes/global');
 const app = express();
 
 var moment = require('moment');
+var jobList= [];
 require('moment-timezone');
 moment.tz.setDefault("Asia/Seoul");
 
@@ -56,6 +58,18 @@ const server = app.listen(app.get('port'), () => {
 // sequelize 연동
 models.sequelize.sync().then( () => {
 	console.log("DB Connect Success");
+
+	//Schdule 등록
+	//매일 11시						초 분 시 일 월 주
+	var job = schedule.scheduleJob('00 00 11 * * *', function() {
+		//Temp에 등록된 데이터 삭제
+		let mNow = new Date();
+		console.log('remove temp folder call');
+		console.log(mNow);
+		globalRouter.removefiles('./AllPhotos/Temp/');
+	});
+
+	jobList.push(job);
 }).catch( err => {
     console.log("DB Connect Faield");
     console.log(err);
@@ -201,3 +215,116 @@ app.post('/Check/Version', function(req, res) {
 		})
 	}
 });
+
+
+app.get('/Schedule/TempPhotoClear', function(req, res) {
+	var job = schedule.scheduleJob('00 00 11 * * *', function() {
+		let mNow = new Date();
+		console.log('remove temp folder call');
+		console.log(mNow);
+		globalRouter.removefiles('./AllPhotos/Temp/');
+	});
+
+	jobList.push(job);
+	res.status(200).send(true);
+});
+
+app.get('/Schedule/Cancel' , function(req, res) {
+	for(var i = 0 ; i < jobList.length; ++i){
+		jobList[i].cancel();
+	}
+});
+
+
+const client = globalRouter.client;
+app.post('/OnResume', async(req, res) => {
+	client.hmset(String(req.body.userID), {
+		"isOnline" : 1,
+	});
+
+	res.status(200).send(true);
+})
+
+app.post('/OnPause', async(req, res) => {
+	client.hmset(String(req.body.userID), {
+		"isOnline" : 0,
+	});
+
+	res.status(200).send(true);
+})
+
+const s3Multer = require('./routes/multer');
+app.post('/Test', async(req, res) => {
+	await models.User.findOne({
+        where : {
+            Email : req.body.email
+        },
+        include : [
+            {
+                    model : models.Pet,
+					required : true,
+					limit: 99,
+                    order : [
+                                    ['id', 'DESC']
+                    ],
+                    include : [
+                        {
+                                model : models.PetPhoto,
+                                required : true,
+                                limit : 5,
+                                order : [
+                                                ['Index', 'ASC']
+                                ]
+                        },
+                        {
+                                model : models.BowlDeviceTable,
+                                required : true,
+                                limit : 2,  //밥그릇, 물그릇
+                                order : [
+                                                ['id', 'DESC']
+                                ]
+                        },
+		            ]
+            }
+        ]
+    }).then(result => {
+        console.log(URL + '/DebugLogin User findOne is Success');
+            //로그인 정보가 없을 때
+        if(globalRouter.IsEmpty(result)){
+            res.status(200).send(null);
+            return;
+        }else{
+            const payload = {
+                Email : req.body.email
+            };
+
+            const secret = tokenController.getSecret(ACCESS_TOKEN);
+            const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+        
+            const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+            const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+            console.log("refreshtoken:" + reftoken);
+
+            let value = {
+                RefreshToken: reftoken 
+              }
+          
+            var resData = {
+                result,
+                AccessToken: token,
+                RefreshToken: reftoken,
+                AccessTokenExpiredAt: (tokenController.getExpired(token) - 65000).toString(),
+            };
+
+            result.update(value).then(result2 => {
+                res.status(200).send(resData);
+            }).catch(err => {
+                console.log(URL + '/DebugLogin User Update is failed' + err);
+                res.status(400).send(null);
+            })
+        }
+    }).catch(err => {
+        globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
+        res.status(400).send(null);
+    })
+})

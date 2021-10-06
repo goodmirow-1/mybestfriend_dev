@@ -9,9 +9,9 @@ module.exports = {
                         await models.CommunityPost.findOne({
                                 include: [
                                         { 
-                                        model : models.CommunityLike , 
-                                        required: true, 
-                                        limit: 99,
+                                                model : models.CommunityPostLike , 
+                                                required: true, 
+                                                limit: 99,
                                         },
                                 ],
                                 where : {
@@ -19,7 +19,7 @@ module.exports = {
                                 }
                         }).then(async result => {
         
-                                var replies = await models.CommunityReply.findAll({where : {PostID : result.id}});
+                                var replies = await models.CommunityPostReply.findAll({where : {PostID : result.id}});
                                 var repliesLength = replies.length;
                                 var community = result;
                 

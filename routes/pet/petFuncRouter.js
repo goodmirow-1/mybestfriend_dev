@@ -11,10 +11,18 @@ module.exports = {
                             },
                             include : [
                                     {
-                                            model : models.PetPhoto,
-                                            required : true,
-                                            limit : 5,
-                                    }
+                                        model : models.PetPhoto,
+                                        required : true,
+                                        limit : 5,
+                                    },
+                                    {
+                                        model : models.BowlDeviceTable,
+                                        required : true,
+                                        limit : 2,  //밥그릇, 물그릇
+                                        order : [
+                                                        ['id', 'DESC']
+                                        ]
+                                },
                             ]
                     }).then(result => {
                             console.log('Pet SelectBYID findOne Success');

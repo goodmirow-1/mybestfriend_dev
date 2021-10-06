@@ -11,17 +11,19 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      this.belongsTo( models.BowlDevice, {
-        foreignKey : "BowlDeviceID",
+      this.belongsTo( models.Pet, {
+        foreignKey : "PetID",
         onDelete : "cascade",
       });
     }
   };
   Intake.init({
-    BowlDeviceID: DataTypes.INTEGER,
+    PetID: DataTypes.INTEGER,
     BowlWeight: DataTypes.DOUBLE,
     Amount: DataTypes.DOUBLE,
-    Wobble: DataTypes.DOUBLE
+    Wobble: DataTypes.DOUBLE,
+    BowlType: DataTypes.INTEGER,
+    State: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'Intake',

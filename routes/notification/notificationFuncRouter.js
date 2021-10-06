@@ -8,10 +8,11 @@ module.exports = {
         return new Promise((resolv, reject) => {
             models.NotificationList.create({
                 UserID: data.userID,
-                TargetID : data.inviteID,
+                TargetID : data.targetID,
                 Type : data.type,
                 UUID : data.uuid,
-                IsSend : data.isSend
+                IsSend : data.isSend,
+                TableIndex : data.tableIndex
             }).then( result => {
                 console.log('InsertNotification create Success ' + result);
                 resolv(result);

@@ -40,6 +40,10 @@ module.exports = {
         type: Sequelize.BOOLEAN,
         defaultValue: 0
       },
+      Birthday: {
+        type: Sequelize.STRING,
+        defaultValue: '1990-12-10'
+      },
       MarketingAgree: {
         type: Sequelize.BOOLEAN
       },

@@ -15,20 +15,23 @@ router.post('/Select/ID', async(req, res) => {
 })
 
 router.post('/Select/UserID', async(req, res) => {
-        await models.Pet.findAll({
-                where : {
-                        UserID : req.body.userID
-                },
-                include : [
+	await models.Pet.findAll({
+		where : {
+                        UserID : req.body.userID,
+		},
+		order : [
+			['Index', 'ASC']
+		],
+		include : [
                         {
                                 model : models.PetPhoto,
                                 required : true,
                                 limit : 5,
                                 order : [
-                                        ['Index', 'ASC']
+                                                ['Index', 'ASC']
                                 ]
                         }
-                ]
+		]
         }).then(result => {
                 console.log(URL + '/Select/UserID Pet findAll Success');
                 res.status(200).send(result);
@@ -139,10 +142,12 @@ router.post('/InsertOrModify', async(req, res) => {     //펫 수정
                                                 }).then(petPhotoResult => {
                                                         console.log(URL + '/InsertOrModify PetPhoto remove id list findone success');
         
-                                                        s3Multer.fileDelete('PetPhotos/' + fields.get('id'), petPhotoResult.ImageURL);
+                                                        s3Multer.fileDelete('PetPhotos/' + fields.get('id') , petPhotoResult.ImageURL);
         
                                                         petPhotoResult.destroy({}).then(petPhotoDestroyResult => {
                                                                 console.log(URL + '/Modify PetPhoto Destroy Success');
+                                                        }).catch(err => {
+                                                                console.log(URL + '/Modify PetPhoto Destroy failed' + err);
                                                         })
                                                 }).catch(err => {
                                                         globalRouter.logger.error(URL + '/InsertOrModify PetPhoto findOne Failed ' + err);
@@ -204,8 +209,34 @@ router.post('/InsertOrModify', async(req, res) => {     //펫 수정
         //임시 폴더 삭제는 주기적으로 한번씩 삭제가 필요함 언제할지는 의문.
         form.parse(req, function (error, field, file) {
                 console.log('[parse()] error : ' + error + ', field : ' + field + ', file : ' + file);
-                console.log(URL + '/modify success');
+                console.log(URL + '/InsertOrModify success');
         });
 });
+
+router.post('/Insert/UserCustomFood', async(req, res) => {
+        await models.UserFoodTypeTable.findOrCreate({
+                where : {
+                        BrandName : req.body.brandName,
+                        KoreaName: req.body.koreaName,
+                        EnglishName : req.body.englishName
+                },
+                defaults : {
+                        BrandName : req.body.brandName,
+                        KoreaName: req.body.koreaName,
+                        EnglishName : req.body.englishName,
+                        PerProtine : req.body.perProtine,
+                        PerFat : req.body.perFat,
+                        Carbohydrate : req.body.carbohydrate,
+                        Calorie: req.body.calorie
+                }
+        }).then(result => {
+                console.log(URL + '/Insert/UserCustomFood UserFoodTypeTable create findOrCreate Success');
+
+                res.status(200).send(true);
+        }).catch(err => {
+                console.log(URL + '/Insert/UserCustomFood UserFoodTypeTable create findOrCreate Failed ' + err);
+                res.status(404).send(null);
+        })
+})
 
 module.exports = router;

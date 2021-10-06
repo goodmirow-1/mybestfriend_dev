@@ -43,6 +43,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       allowNull: true
     },
+    Birthday: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: "1990-12-10"
+    },
     RefreshToken: {
       type: DataTypes.STRING(400),
       allowNull: true,

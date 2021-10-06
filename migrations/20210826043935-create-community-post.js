@@ -39,12 +39,24 @@ module.exports = {
       ImageURL3: {
         type: Sequelize.STRING
       },
-      IsShow: {
-        type: Sequelize.BOOLEAN
+      PetType: {
+        type: Sequelize.INTEGER,
+        defaultValue : 0
       },
       Type: {
         type: Sequelize.INTEGER,
         defaultValue : 0
+      },
+      Point: {
+        type: Sequelize.INTEGER,
+        defaultValue : 0
+      },
+      RegisterTime : {
+        type: Sequelize.DATE,
+      },
+      IsShow: {
+        type: Sequelize.BOOLEAN,
+        defaultValue : true,
       },
       createdAt: {
         allowNull: false,

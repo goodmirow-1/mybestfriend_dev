@@ -22,6 +22,7 @@ module.exports = (sequelize, DataTypes) => {
     TargetID: DataTypes.INTEGER,
     Type: DataTypes.STRING,
     UUID: DataTypes.STRING,
+    TableIndex: DataTypes.INTEGER,
     IsSend: DataTypes.BOOLEAN
   }, {
     sequelize,

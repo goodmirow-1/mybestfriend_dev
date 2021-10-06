@@ -22,6 +22,40 @@ const REFRESH_TOKEN = 1;
 
 let URL = '/User';
 
+router.post('/Select', async (req, res) => {
+    await models.User.findOne({
+        where : {
+            UserID : req.body.userID
+        },
+        include : [
+            {
+                model : models.Pet,
+                required : true,
+                limit : 10,
+                order : [
+                        ['Index', 'ASC']
+                ],
+                include : [
+                    {
+                        model : models.PetPhoto,
+                        required : true,
+                        limit : 5,
+                        order : [
+                                ['Index', 'ASC']
+                        ]
+                    }
+                ]
+            }
+        ]
+    }).then(result => {
+        console.log(URL + '/Select/User User findOne Success');
+        res.status(200).send(result);
+    }).catch(err => {
+        globalRouter.logger.error(URL + '/Select/User findOne is Failed' + err);
+        res.status(400).send(null);
+    })
+})
+
 router.post('/IDCheck', async (req, res) => {
     if (globalRouter.IsEmpty(req.body.email)) {
         console.log('empty id or pwd error');
@@ -69,6 +103,69 @@ router.post('/PhoneCheck', async(req, res) => {
     })
 })
 
+router.post('/Find/ID', async(req, res) => {
+    await models.User.findOne({
+        where : {
+            RealName : req.body.name,
+            PhoneNumber : req.body.phoneNumber
+        }
+    }).then(result => {
+        console.log(URL + '/Find/ID findOne success');
+        res.status(200).send(result);
+    }).catch(err => {
+        globalRouter.logger.error(URL + '/Find/ID findOne is Failed' + err);
+        res.status(400).send(null);
+    })
+})
+
+router.post('/Find/Password', async(req, res) => {
+    await models.User.findOne({
+        where : {
+            Email : req.body.email,
+            RealName : req.body.name,
+            PhoneNumber : req.body.phoneNumber
+        }
+    }).then(result => {
+        console.log(URL + "/Find/Password User findOne success");
+        res.status(200).send(result);
+    }).catch(err => {
+        console.log(URL + "/Find/Password User findOne Failed" + err);
+        res.status(404).send(null);
+    })
+})
+
+router.post('/Modify/PasswordDontKnowID', async(req, res) => {
+    await models.User.findOne({
+        where: {
+          Email: req.body.email, //좌측에 있는 부분이 ..models/user.js 에 있는 변수명과 (테이블의 변수명과) 일치해야하는 부분이다.
+        },
+      }).then(async result => {
+    
+        if(globalRouter.IsEmpty(result)){
+          console.log(result);
+          globalRouter.logger.error(URL + 'Modify/PasswordDontKnowID is Empty');
+          res.json(null);
+        }else{
+          const newhashedPwd = passwordController.getHashedPassword(req.body.password);
+    
+          let value = {
+            Password : newhashedPwd,
+          }
+    
+          await result.update(value).then(result => {
+            console.log(URL + 'Modify/PasswordDontKnowID Success' + result);
+            res.json(true);
+          }).catch(err => {
+            console.log(URL + 'Modify/PasswordDontKnowID Failed' + err);
+            res.json(null);
+          })
+        }
+      }).catch(err => {
+        globalRouter.logger.error(URL + 'Modify/PasswordDontKnowID is Failed' + err);
+        res.json(null);
+      })
+})
+
 router.post('/Insert', async(req,res) => {
     if(globalRouter.IsEmpty(req.body.email) || globalRouter.IsEmpty(req.body.password)){
         console.log('empty id or pwd error');
@@ -86,6 +183,8 @@ router.post('/Insert', async(req,res) => {
                 RealName: req.body.name,
                 Password: hashedPwd,
                 PhoneNumber : req.body.phoneNumber,
+                Sex : req.body.sex,
+                Birthday : req.body.birthday,
                 MarketingAgree: req.body.marketingAgree,
                 MarketingAgreeTime: marketingAgreeTime
             }
@@ -94,9 +193,7 @@ router.post('/Insert', async(req,res) => {
                 console.log('user register success');
         
                 client.hmset(String(result[0].UserID), {
-                    "socketID" : 0,
                     "isOnline" : 0,
-                    "roomStatus" : 0
                 });
 
                 res.status(200).send(result[0]);
@@ -111,11 +208,61 @@ router.post('/Insert', async(req,res) => {
     }
 })
 
+router.post('/Insert/NeedInfo', async(req, res) => {
+    await models.User.update(
+        {
+            NickName : req.body.nickname,
+            Location : req.body.location,
+            Sex: req.body.sex,
+            Birthday: req.body.birthday
+        },
+        {
+            where : {
+                UserID : req.body.userID
+            }
+        }
+    ).then(result => {
+        console.log(URL + '/Insert/NeedInfo Success');
+        res.status(200).send(result);
+    }).catch(err => {
+        globalRouter.logger.error(URL + '/Insert/NeedInfo User findOne is Failed' + err);
+        res.status(400).send(null);
+    })
+})
+
 router.post('/DebugLogin', async(req, res) => {
     await models.User.findOne({
         where : {
             Email : req.body.email
-        }
+        },
+        include : [
+            {
+                    model : models.Pet,
+                    required : true,
+                    limit: 99,
+                    order : [
+                                    ['id', 'DESC']
+                    ],
+                    include : [
+                        {
+                                model : models.PetPhoto,
+                                required : true,
+                                limit : 5,
+                                order : [
+                                                ['Index', 'ASC']
+                                ]
+                        },
+                        {
+                                model : models.BowlDeviceTable,
+                                required : true,
+                                limit : 2,  //밥그릇, 물그릇
+                                order : [
+                                                ['id', 'DESC']
+                                ]
+                        },
+		            ]
+            }
+        ]
     }).then(result => {
         console.log(URL + '/DebugLogin User findOne is Success');
             //로그인 정보가 없을 때
@@ -165,96 +312,89 @@ router.post('/Login', async(req,res) => {
         where: {
             Email : req.body.email, //좌측에 있는 부분이 ..models/user.js 에 있는 변수명과 (테이블의 변수명과) 일치해야하는 부분이다.
             Password : hashedPwd //우측에 있는 부분이 client 에서 전송되는 데이터 명으로, client 에서 보내는 변수명과 일치해야한다 
-          },
+        },
+        include : [
+            {
+                    model : models.Pet,
+                    required : true,
+                    order : [
+                                    ['id', 'DESC']
+                    ],
+                    limit: 99,
+                    include : [
+                        {
+                                model : models.PetPhoto,
+                                required : true,
+                                limit : 5,
+                                order : [
+                                                ['Index', 'ASC']
+                                ]
+                        },
+                        {
+                                model : models.BowlDeviceTable,
+                                required : true,
+                                limit : 2,  //밥그릇, 물그릇
+                                order : [
+                                                ['id', 'DESC']
+                                ]
+                        },
+		            ]
+            }
+        ]
     }).then(result => {
         if(globalRouter.IsEmpty(result)){
             console.log(URL +'/Login is Empty');
             res.status(200).send(null);
         }else{
-            console.log("input password:" + result.Password);
-            const resPassword = result.Password;
 
-            if (resPassword == hashedPwd) { //들어온 비밀번호의 hased 버전이 테이블에 있는 비밀번호 값과 같으면 그다음 flow 로 넘어갈 수 있음
-                const payload = {
-                    Email : req.body.email
-                };
-                const secret = tokenController.getSecret(ACCESS_TOKEN);
-                const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+            client.hgetall(String(result.UserID), function(err, obj) {
+                if(err) throw err;
+                if(obj == null) return;
 
-                const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
-                const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
-                console.log("refreshtoken:" + reftoken);
+                console.log("input password:" + result.Password);
+                const resPassword = result.Password;
+    
+                if (resPassword == hashedPwd) { //들어온 비밀번호의 hased 버전이 테이블에 있는 비밀번호 값과 같으면 그다음 flow 로 넘어갈 수 있음
+                    const payload = {
+                        Email : req.body.email
+                    };
+                    const secret = tokenController.getSecret(ACCESS_TOKEN);
+                    const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+    
+                    const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+                    const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+                    console.log("refreshtoken:" + reftoken);
+    
+                    const response = {
+                        result,
+                        AccessToken: token,
+                        RefreshToken: reftoken,
+                        AccessTokenExpiredAt: (tokenController.getExpired(token) - 65000).toString(),
+                    }
+    
+                    console.log("WHAT  IS  RESULT.UserID   :",result.UserID)
+    
+                    models.User.update( //reftoken 값 update
+                    { RefreshToken: reftoken }
+                    , { where: { UserID: result.UserID } }
+                    ).then(result2 => {
+                        console.log('RefreshToken Update Success' + result2 );
 
-                const response = {
-                    result,
-                    AccessToken: token,
-                    RefreshToken: reftoken,
-                    AccessTokenExpiredAt: (tokenController.getExpired(token) - 65000).toString(),
-                }
+                        client.hmset(String(userID), {
+                            "isOnline" : 1,
+                        });
 
-                console.log("WHAT  IS  RESULT.UserID   :",result.UserID)
-
-                models.User.update( //reftoken 값 update
-                { RefreshToken: reftoken }
-                , { where: { UserID: result.UserID } }
-                ).then(result2 => {
-                    console.log('RefreshToken Update Success' + result2 );
-                    res.status(200).json(response);
-                }).catch(err => {
-                    console.log(err + "real error");
+                        res.status(200).json(response);
+                    }).catch(err => {
+                        console.log(err + "real error");
+                        res.status(400).send(null);
+                    })
+                }else{
                     res.status(400).send(null);
-                })
-            }else{
-                res.status(400).send(null);
-            }
+                }
+            });
         }
     })
-})
-
-router.post('/Select/newAccessToken', async(req,res) => {
-
-  console.log("1. from client:", req.body.refreshToken);
-  //문제가 있다... 진자로
-  await models.user.findOne({
-    where: { UserID: req.body.userID }
-  }).then(result => {
-    if (result.RefreshToken == '') { ////해당 id 가 가진 reftoken 값이 비어있으면
-      console.log("this User has no RefreshToken");
-      res.status(400).send("this User has no RefreshToken");
-    } else { //있으면 
-      //tableRefresh = result.RefreshToken; //테이블 reftoken 값 넣어!
-      console.log("this User has RefreshToken");
-      console.log("2. from table: ", result.RefreshToken); //이게 
-      return result
-    }
-  }).then( async result =>{
-    if (String(req.body.refreshToken) == String(result.RefreshToken)) {
-      const VerifyRefresh = tokenController.VerifyRefToken(body.refreshToken);
-      if (VerifyRefresh) { //인증 문제없이 되면
-        const payload = {
-          UserID: req.body.userID
-        };
-        const secret = tokenController.getSecret(ACCESS_TOKEN);
-        const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
-        //new access token 발급
-        const response = {
-          "AccessToken": token,
-          "AccessTokenExpiredAt": tokenController.getExpired(token)
-        }
-        console.log(response); //response 값 확인
-        res.status(200).json(response); //send new access token to client
-      }
-      else { //인증에 문제 생기면
-        res.status(401).json({ success: false, message: 'Failed to authenticate refresh token. RE login please'/*, error: err */ });
-      }
-    }
-    else { //DB 안의 refToken 값이랑 cli 에서 넘어온 refToken 값이랑 다르면
-      res.status(404).send('Invalid request.. NOT refresh tkn expired error')
-    }
-  }).catch(err => {
-    console.log('user register failed' + err);
-    res.status(400).send(false);
-  });
 })
 
 router.post('/Login/Social', async(req, res) => {
@@ -270,42 +410,104 @@ router.post('/Login/Social', async(req, res) => {
                 Email : req.body.email,
                 Name : req.body.name,
                 LoginType : req.body.loginType
-            }
+            },
+            include : [
+                {
+                        model : models.Pet,
+                        required : true,
+                        					limit: 99,
+                        order : [
+                                        ['id', 'DESC']
+                        ],
+                        include : [
+                            {
+                                    model : models.PetPhoto,
+                                    required : true,
+                                    limit : 5,
+                                    order : [
+                                                    ['Index', 'ASC']
+                                    ]
+                            },
+                            {
+                                    model : models.BowlDeviceTable,
+                                    required : true,
+                                    limit : 2,  //밥그릇, 물그릇
+                                    order : [
+                                                    ['id', 'DESC']
+                                    ]
+                            },
+                        ]
+                }
+            ]
         }).then(result => {
             if(result[1]){ //새 회원이면
                 //필요에 따라 처리 필요함 (구글, 카톡, 애플)
+                client.hmset(String(result[0].UserID), {
+                    "isOnline" : 0,
+                });
             }else{
-                const payload = {
-                    Email : req.body.email
-                };
+                client.hgetall(String(result.UserID), function(err, obj) {
+                    if(err) throw err;
+                    if(obj == null) return;
+
+                    const payload = {
+                        Email : req.body.email
+                    };
+            
+                    const secret = tokenController.getSecret(ACCESS_TOKEN);
+                    const refsecret = tokenController.getSecret(REFRESH_TOKEN);
         
-                const secret = tokenController.getSecret(ACCESS_TOKEN);
-                const refsecret = tokenController.getSecret(REFRESH_TOKEN);
-    
-                const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
-                const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
-                console.log("refreshtoken:" + reftoken);
-                
-                const response = {
-                    result: result[0],
-                    AccessToken: token,
-                    RefreshToken: reftoken,
-                    AccessTokenExpiredAt: (tokenController.getExpired(token) - 65000).toString()
-                }
-    
-                models.User.update( //reftoken 값 update
-                { RefreshToken: reftoken }
-                , { where: { UserID: result[0].UserID } }
-                ).then(result => {
-                console.log('RefreshToken Update Success' + result);
-                res.status(200).json(response);
-                }).catch(err => {
-                console.log(err + "real error");
-                res.status(400).send(null);
-                })
+                    const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+                    const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+                    console.log("refreshtoken:" + reftoken);
+                    
+                    const response = {
+                        result: result[0],
+                        AccessToken: token,
+                        RefreshToken: reftoken,
+                        AccessTokenExpiredAt: (tokenController.getExpired(token) - 65000).toString()
+                    }
+        
+                    models.User.update( //reftoken 값 update
+                    { RefreshToken: reftoken }
+                    , { where: { UserID: result[0].UserID } }
+                    ).then(result => {
+                    console.log('RefreshToken Update Success' + result);
+
+                    client.hmset(String(userID), {
+                        "isOnline" : 1,
+                    });            
+
+                    res.status(200).json(response);
+                    }).catch(err => {
+                    console.log(err + "real error");
+                    res.status(400).send(null);
+                    })
+                });
+
             }
         })
     }
+})
+
+
+router.post('/Logout', async(req, res) => {
+    await models.FcmTokenList.destroy({
+        where : {
+            UserID : req.body.userID
+        },
+    }).then( async result => {
+        console.log(URL + '/Logout success');
+
+        client.hmset(String(req.body.userID), {
+            "isOnline" : 0,
+        });
+
+        res.status(200).send(true);
+    }).catch( err => {
+        globalRouter.logger.error(URL + 'logout [error] error ' + err);
+        res.status(404).send(err);
+    })
 })
 
 router.post('/Edit/Password', async(req, res) => {
@@ -363,7 +565,7 @@ router.post('/Edit/Password', async(req, res) => {
             res.status(200).send(value);
         }
     }).catch(err => {
-        console.log('new password findOne failed', err);
+        globalRouter.logger.error('[error] error ' + err);
         res.status(200).send(false);
       });
 })
@@ -404,6 +606,7 @@ router.post('/Edit/ProfileInfo', async(req,res) => {
                     Location : fields.get('location'),
                     Information : fields.get('information'),
                     Sex : fields.get('sex'),
+                    Birthday: fields.get('birthday')
                 }
             ).then(updateResult => {
                 console.log(URL + '/Edit/ProfileInfo User data is update success');
@@ -457,5 +660,51 @@ router.post('/Edit/ProfileInfo', async(req,res) => {
             console.log(URL + '/Edit/ProfileInfo success');
     });
 })
+
+router.post('/Check/Token', async(req,res) => {
+
+    console.log("1. from client:", req.body.refreshToken);
+    //문제가 있다... 진자로
+    await models.User.findOne({
+      where: { UserID: req.body.userID }
+    }).then(result => {
+      if (result.RefreshToken == '') { ////해당 id 가 가진 reftoken 값이 비어있으면
+        console.log("this User has no RefreshToken");
+        res.status(400).send("this User has no RefreshToken");
+      } else { //있으면 
+        //tableRefresh = result.RefreshToken; //테이블 reftoken 값 넣어!
+        console.log("this User has RefreshToken");
+        console.log("2. from table: ", result.RefreshToken); //이게 
+        return result
+      }
+    }).then( async result =>{
+      if (String(req.body.refreshToken) == String(result.RefreshToken)) {
+        const VerifyRefresh = tokenController.VerifyRefToken(body.refreshToken);
+        if (VerifyRefresh) { //인증 문제없이 되면
+          const payload = {
+            UserID: req.body.userID
+          };
+          const secret = tokenController.getSecret(ACCESS_TOKEN);
+          const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+          //new access token 발급
+          const response = {
+            "AccessToken": token,
+            "AccessTokenExpiredAt": tokenController.getExpired(token)
+          }
+          console.log(response); //response 값 확인
+          res.status(200).json(response); //send new access token to client
+        }
+        else { //인증에 문제 생기면
+          res.status(401).json({ success: false, message: 'Failed to authenticate refresh token. RE login please'/*, error: err */ });
+        }
+      }
+      else { //DB 안의 refToken 값이랑 cli 에서 넘어온 refToken 값이랑 다르면
+        res.status(404).send('Invalid request.. NOT refresh tkn expired error')
+      }
+    }).catch(err => {
+      console.log('user register failed' + err);
+      res.status(400).send(false);
+    });
+  })
 
 module.exports = router;

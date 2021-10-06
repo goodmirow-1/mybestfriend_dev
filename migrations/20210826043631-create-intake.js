@@ -8,10 +8,10 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      BowlDeviceID: {
+      PetID: {
         type: Sequelize.INTEGER,
         references: {
-          model : 'BowlDevices',
+          model : 'Pets',
           key : 'id',
         },
       },
@@ -26,6 +26,14 @@ module.exports = {
       Wobble: {
         type: Sequelize.DOUBLE,
         defaultValue : 0.0
+      },
+      BowlType: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0
+      },
+      State: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0
       },
       createdAt: {
         allowNull: false,

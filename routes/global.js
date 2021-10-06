@@ -110,19 +110,19 @@ function getWordLen(x) { //검색 필터 단어 나누는 용
     var splitFileName = x.split("|");
     var len = splitFileName.length;
     return len;
-    }
+}
     
-    function getWords(x) { //검색 필터 단어 나누는 용
+function getWords(x) { //검색 필터 단어 나누는 용
     var splitFileName = x.split("|");
     return splitFileName;
-    }
+}
     
     
-    function sleep(ms) {
+function sleep(ms) {
     return new Promise((resolve) => {
       setTimeout(resolve, ms);
     });
-    }   
+}   
     
 
 //전역변수
