@@ -26,6 +26,10 @@ module.exports = {
         type: Sequelize.INTEGER,
         defaultValue : 0
       },
+      Baterry: {
+        type: Sequelize.INTEGER,
+        defaultValue : 5    //배터리 5단계
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE

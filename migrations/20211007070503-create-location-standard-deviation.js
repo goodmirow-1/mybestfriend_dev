@@ -1,40 +1,39 @@
 'use strict';
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('UserFoodTypeTables', {
+    await queryInterface.createTable('LocationStandardDeviations', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      UserID: {
-        type: Sequelize.INTEGER,
-      },
-      BrandName: {
+      Location: {
         type: Sequelize.STRING
       },
-      KoreaName: {
-        type: Sequelize.STRING
-      },
-      EnglishName: {
-        type: Sequelize.STRING
-      },
-      PerProtein: {
+      FoodStandardDeviation: {
         type: Sequelize.DOUBLE,
         defaultValue: 0.0
       },
-      PerFat: {
+      FoodAverage: {
         type: Sequelize.DOUBLE,
         defaultValue: 0.0
       },
-      Carbohydrate: {
+      WaterStandardDeviation: {
         type: Sequelize.DOUBLE,
         defaultValue: 0.0
       },
-      Calorie: {
-        type: Sequelize.INTEGER,
-        defaultValue: 0
+      WaterAverage: {
+        type: Sequelize.DOUBLE,
+        defaultValue: 0.0
+      },
+      WeightStandardDeviation: {
+        type: Sequelize.DOUBLE,
+        defaultValue: 0.0
+      },
+      WeightAverage: {
+        type: Sequelize.DOUBLE,
+        defaultValue: 0.0
       },
       createdAt: {
         allowNull: false,
@@ -47,6 +46,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('UserFoodTypeTables');
+    await queryInterface.dropTable('LocationStandardDeviations');
   }
 };

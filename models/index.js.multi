@@ -1,0 +1,51 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const Sequelize = require('sequelize');
+const basename = path.basename(__filename);
+const env = process.env.NODE_ENV || 'development';
+const config = require(__dirname + '/../config/config.json')[env];
+const db = {};
+const databases = Object.keys(config.databases);
+
+for(let i = 0 ; i < databases.length; ++i) {
+  let database = databases[i];
+  let dbPath = config.databases[database];
+  console.log('database : ', database);
+  console.log('dbPath database : ', dbPath.host );
+  db[database] = new Sequelize( dbPath.database, dbPath.username, dbPath.password, dbPath);
+}
+
+fs
+  .readdirSync(__dirname + '/WriteDatabase')
+  .filter(file => {
+    return (file.indexOf('.') !== 0) && (file !== basename) && (file.slice(-3) === '.js');
+  })
+  .forEach(file => {
+    const model = require(path.join(__dirname + '/WriteDatabase', file))(db['WriteDatabase'], Sequelize.DataTypes);
+    db[model.name] = model;
+  });
+
+  fs
+  .readdirSync(__dirname + '/ReadDatabase')
+  .filter(file => {
+    return (file.indexOf('.') !== 0) && (file !== basename) && (file.slice(-3) === '.js');
+  })
+  .forEach(file => {
+    const model = require(path.join(__dirname + '/ReadDatabase', file))(db['ReadDatabase'], Sequelize.DataTypes);
+    db[model.name] = model;
+  });
+
+Object.keys(db).forEach(modelName => {
+  if (db[modelName].associate) {
+    db[modelName].associate(db);
+  }
+});
+
+db.sequelizeWrite = db['WriteDatabase'];
+db.sequelizeRead= db['ReadDatabase'];
+
+db.Sequelize = Sequelize;
+
+module.exports = db;

@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class UserFoodTypeTable extends Model {
+  class CommunityPostReplyDeclare extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -11,20 +11,21 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      this.belongsTo(models.CommunityPostReply,{
+        foreignKey : { name : 'TargetID'},
+        onDelete : 'CASCADE'
+      });
     }
   };
-  UserFoodTypeTable.init({
+  CommunityPostReplyDeclare.init({
     UserID: DataTypes.INTEGER,
-    BrandName: DataTypes.STRING,
-    KoreaName: DataTypes.STRING,
-    EnglishName: DataTypes.STRING,
-    PerProtine: DataTypes.DOUBLE,
-    PerFat: DataTypes.DOUBLE,
-    Carbohydrate: DataTypes.DOUBLE,
-    Calorie: DataTypes.INTEGER
+    TargetID: DataTypes.INTEGER,
+    Contents: DataTypes.STRING,
+    Type: DataTypes.INTEGER,
+    IsProcessing: DataTypes.BOOLEAN
   }, {
     sequelize,
-    modelName: 'FoodTypeTable',
+    modelName: 'CommunityPostReplyDeclare',
   });
-  return UserFoodTypeTable;
+  return CommunityPostReplyDeclare;
 };

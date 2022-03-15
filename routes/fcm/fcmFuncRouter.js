@@ -30,29 +30,42 @@ module.exports = {
 
                         var isBanType = false;
 
-                        //식사 알림 차단
-                        if(result.Eating == false){
-                                isBanType = true;
+                        switch(data.type){
+                                case "POST_LIKE":
+                                case "POST_REPLY":
+                                {
+                                        if(result.Community == false) isBanType = true;
+                                }
+                                break;
                         }
 
-                        //분석 알림 차단
-                        if(result.Analysis == false){
-                                isBanType = true;
-                        }
+                        // //식사 알림 차단
+                        // if(result.Eating == false){
+                        //         isBanType = true;
+                        // }
 
-                        //한마디 알림 차단
-                        if(result.Advice == false){
-                                isBanType = true;
-                        }
+                        // //분석 알림 차단
+                        // if(result.Analysis == false){
+                        //         isBanType = true;
+                        // }
 
-                        //커뮤니티 알림 차단
-                        if(result.Community == false){
-                                isBanType = true;
-                        }
+                        // //한마디 알림 차단
+                        // if(result.Advice == false){
+                        //         isBanType = true;
+                        // }
 
-                        //마케팅 알림 차단
-                        if(result.Marketing == false){
-                                isBanType = true;
+                        // //커뮤니티 알림 차단
+                        // if(result.Community == false){
+                        //         isBanType = true;
+                        // }
+
+                        // //마케팅 알림 차단
+                        // if(result.Marketing == false){
+                        //         isBanType = true;
+                        // }
+
+                        if(data.type == "POST_LIKE" || data.type == "POST_REPLY"){
+                                page = 'COMMUNITY';
                         }
 
                         var message = data.title + " : " + data.body;
@@ -64,6 +77,7 @@ module.exports = {
                                 res = fcmData.id + "|" + fcmData.UserID + '|' + fcmData.TargetID + '|' + fcmData.Type + '|' + uuidStr + '|' + tableStr + '|' + date;
          
                         let sendMsg;
+                        var badgeCount = Number(result.BadgeCount + 1);
                         if(data.isSend == 1 || isBanType == true){
                                 sendMsg = {
                                         data : {
@@ -75,6 +89,7 @@ module.exports = {
                                         },
                                         token : result.Token,
                                 }
+                                badgeCount = 0;
                         }else{
                                 sendMsg = {
                                         notification : {
@@ -86,6 +101,14 @@ module.exports = {
                                                 click_action : "FLUTTER_NOTIFICATION_CLICK",
                                                 screen: page
                                         },
+                                        apns: {
+                                                payload: {
+                                                  aps: {
+                                                    badge: badgeCount,
+                                                    sound: 'default',
+                                                  },
+                                                },
+                                            },
                                         token : result.Token,
                                 }
                         }
@@ -93,8 +116,9 @@ module.exports = {
                         console.log(sendMsg);
 
                         admin.messaging().send(sendMsg)
-                         .then( result => {
-                             console.log('fcm send is success' + result);
+                         .then( fcmResult => {
+                                result.update({BadgeCount : badgeCount});
+                                console.log('fcm send is success' + fcmResult);
                              return true;
                          })
                          .catch( e => {

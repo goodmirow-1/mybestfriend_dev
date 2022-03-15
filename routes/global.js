@@ -9,6 +9,8 @@ const logger = require('../libs/myWinston');
 const redis = require('redis');
 const client = redis.createClient(6379, "127.0.0.1");
 
+var todayAdvice = '';
+
 require('moment-timezone');
 
 moment.tz.setDefault("Asia/Seoul");
@@ -122,12 +124,12 @@ function sleep(ms) {
     return new Promise((resolve) => {
       setTimeout(resolve, ms);
     });
-}   
-    
+}
 
 //전역변수
 module.exports.logger = logger;
 module.exports.client = client;
+module.exports.todayAdvice = todayAdvice;
 
 //전역함수
 module.exports.CreateOrUpdate = CreateOrUpdate;

@@ -15,15 +15,15 @@ module.exports = {
           key : 'id',
         },
       },
+      FoodID : {
+        type: Sequelize.INTEGER,
+        defaultValue: 0
+      },
       BowlWeight: {
         type: Sequelize.DOUBLE,
         defaultValue : 0.0
       },
       Amount: {
-        type: Sequelize.DOUBLE,
-        defaultValue : 0.0
-      },
-      Wobble: {
         type: Sequelize.DOUBLE,
         defaultValue : 0.0
       },

@@ -38,6 +38,14 @@ module.exports = {
       Sex: {
         type: Sequelize.INTEGER
       },
+      PregnantState : {
+        type: Sequelize.INTEGER,
+        defaultValue : 0
+      },
+      ObesityState : {
+        type: Sequelize.INTEGER,
+        defaultValue : 0
+      },
       Disease: {
         type: Sequelize.STRING,
         defaultValue : ''
@@ -49,6 +57,26 @@ module.exports = {
       FoodID: {
         type: Sequelize.INTEGER,
         defaultValue : 0
+      },
+      FoodCalorie: {
+        type: Sequelize.INTEGER,
+        defaultValue : 3784     //강아지 사료의 기본 kcal
+      },
+      FoodWater: {
+        type: Sequelize.INTEGER,
+        defaultValue : 0.12
+      },
+      FoodRecommendedIntake: {
+        type: Sequelize.DOUBLE,
+        defaultValue : 0.0
+      },
+      WaterRecommendedIntake: {
+        type: Sequelize.DOUBLE,
+        defaultValue : 0.0
+      },
+      WeightRecommended: {
+        type: Sequelize.DOUBLE,
+        defaultValue : 0.0
       },
       createdAt: {
         allowNull: false,

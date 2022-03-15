@@ -6,12 +6,16 @@ const router = require('express').Router(),
 
 const s3Multer = require('../multer');
 const communityPostFuncRouter = require('./communityPostFuncRouter');
+const verify = require('../../controllers/parameterToken');
 const client = globalRouter.client;
 const { Op } = require('sequelize');
 
 let URL = '/CommunityPost';
 const LIKES_LIMIT = 100;
 const POPULAR_BASE = 5;//인기글 최소 기준
+
+const { promisify } = require("util");
+const getallAsync = promisify(client.hgetall).bind(client);
 
 router.post('/Select', async(req, res) => {
         await models.CommunityPost.findAll({
@@ -36,7 +40,6 @@ router.post('/Select', async(req, res) => {
                         IsShow : 1,
                 }
         }).then(async result => {
-                console.log(URL + '/Select CommunityPost Success');
 
                 let resData = [];
 
@@ -85,7 +88,8 @@ router.post('/Select/Popular', async(req, res) => {
                 limit : 30,
                 offset : req.body.index * 1,
                 where : {
-                        Type : 1
+                        Type : 1,
+                        IsShow : 1
                 },
                 order : [
 			['RegisterTime', 'DESC']
@@ -103,7 +107,6 @@ router.post('/Select/Popular', async(req, res) => {
                         }
                 ],
         }).then(async result => {
-                console.log(URL + '/Select/Popular Success');
 
                 let resData = [];
 
@@ -157,10 +160,9 @@ router.post('/Select/Detail', async(req, res) => {
                         id : req.body.id
                 }
         }).then(async result => {
-                console.log(URL + '/Select/Detail CommunityPost findOne Success');
 
                 if(globalRouter.IsEmpty(result) || result.IsShow == 0){
-                        console.log('empty or delete post');
+                        globalRouter.logger.error('empty or delete post');
                         res.status(200).send(null);
                 }else{
                         await models.CommunityPostReply.findAll({
@@ -180,7 +182,7 @@ router.post('/Select/Detail', async(req, res) => {
                                                 limit : LIKES_LIMIT,
                                                 include: [
                                                         {
-                                                                model : models.CommunityPostReplyDeclare,
+                                                                model : models.CommunityPostReplyReplyDeclare,
                                                                 required : true,
                                                                 limit : LIKES_LIMIT
                                                         }
@@ -188,22 +190,19 @@ router.post('/Select/Detail', async(req, res) => {
                                         }
                                 ]
                         }).then(result => {
-                                console.log(URL + '/Select/Detial CommunityPostReply findAll Success');
                                 res.status(200).send(result);
                         }).catch(err => {
-                                globalRouter.logger.error(URL + '/Select/Detail CommunityPostReply findAll Failed');
+                                globalRouter.logger.error(URL + '/Select/Detail CommunityPostReply findAll Failed ' + err );
                                 res.status(400).send(null);
                         })
                 }
         }).catch(err => {
-                console.log(URL + '/Select/Detail CommunityPost findOne Failed' + err);
+                globalRouter.logger.error(URL + '/Select/Detail CommunityPost findOne Failed' + err);
                 res.status(400).send(null);
         })
 })
 
 router.post('/InsertOrModify', async(req, res) => {
-        console.log(URL + '/InsertOrModify Do');
-
         var fields = new Map();
 
         var remove_index_values = [];
@@ -219,7 +218,7 @@ router.post('/InsertOrModify', async(req, res) => {
         form.keepExtensions = true;
 
         form.on('field', function (field, value) { //값 하나당 한번씩 돌아가므로,
-                console.log(field);
+                console.log(field + ' ' + value);
                 fields.set(field, value);
                 if(field == 'removeindexlist') remove_index_values.push(value);
                 else if(field == 'imageurllist') image_url_values.push(value);
@@ -229,110 +228,121 @@ router.post('/InsertOrModify', async(req, res) => {
                 if(field == 'images') files.push(file);
                 else console.log('this file has no fieldname');
         }).on('end', async function() {
-                if(fields.get('isCreate') == 1) {
-                        console.log(URL + '/InsertOrModify CommunityPost Create Flow');
 
-                        await models.CommunityPost.create({
-                                UserID : fields.get('userID'),
-                                Category : fields.get('category'),
-                                Kind : fields.get('kind'),
-                                Location : fields.get('location'),
-                                Title : fields.get('title'),
-                                Contents : fields.get('contents'),
-                                PetType : fields.get('petType'),
-                                IsShow: true
-                        }).then(async result => {
-                                console.log(URL + '/InsertOrModify create Success');
-
-                                for(var i = 0 ; i < files.length ; ++i){
-
-                                        var fileName = Date.now() + '.' + files[i].name.split('.').pop();
-
-                                        s3Multer.formidableFileUpload(files[i], 'CommunityPhotos/' + result.id + '/' + fileName);
-                                        if(i == 0){
-                                                await result.update({ImageURL1 : fileName})
-                                        }else if(i == 1){
-                                                await result.update({ImageURL2 : fileName})
-                                        }else{
-                                                await result.update({ImageURL3 : fileName})
-                                        }
-                                }
-
-                                res.status(200).send(await communityPostFuncRouter.SelectByID(result.id));
-                        }).catch(err => {
-                                globalRouter.logger.error(URL + '/InsertOrModify CommunityPost create Failed ' + err);
-                                res.status(400).send(null);
-                        })
-                }else {
-                        console.log(URL + '/InsertOrModify CommunityPost Update Flow');
-
-                        var community = await communityPostFuncRouter.SelectByID(fields.get('id'));
-
-                        community = community['community'];
-                        community.update(
-                                {
-                                        Title : fields.get('title'),
-                                        Contents : fields.get('contents')
-                                },
-                                {
-                                        where : {
-                                                UserID : fields.get('userID')
-                                        }
-                                }
-                        ).then(async communityPostResult => {
-                                console.log(URL + '/InsertOrModify CommunityPost update Success');
-
-                                //기존 이미지 파일 삭제
-                                for(var i = 0 ; i < remove_index_values.length; ++i){
-                                        var imageURL = community.ImageURL1;
-
-                                        if(remove_index_values[i] == 2) imageURL = community.ImageURL2;
-                                        else if(remove_index_values[i] == 3) imageURL = community.ImageURL3;
-
-                                        s3Multer.fileDelete('CommunityPhotos/' + fields.get('id'), imageURL);
-                                }
-
-                                //기존 이미지 삭제
-                                if(remove_index_values.length > 0){
-                                        await community.update({
-                                                ImageURL1 : null,
-                                                ImageURL2 : null,
-                                                ImageURL3 : null
-                                        });
-                                }
-
-                                //기존 이미지 순서 변경
-                                for(var i = 0 ; i < image_url_values.length; ++i){
-                                        if(i == 0){
-                                                await community.update({ImageURL1 : image_url_values[i]})
-                                        }else if(i == 1){
-                                                await community.update({ImageURL2 : image_url_values[i]})
-                                        }else{
-                                                await community.update({ImageURL3 : image_url_values[i]})
-                                        }
-                                }
-
-                                //새로운 데이터 생성
-                                for(var i = image_url_values.length ; i < image_url_values.length + files.length ; ++i){
-                                        var index = i - image_url_values.length;
-                                        var fileName = Date.now() + '.' + files[index].name.split('.').pop();
-
-                                        s3Multer.formidableFileUpload(files[index], 'CommunityPhotos/' + fields.get('id') + '/' + fileName);
-
-                                        if(i == 0){
-                                                await community.update({ImageURL1 : fileName})
-                                        }else if(i == 1){
-                                                await community.update({ImageURL2 : fileName})
-                                        }else{
-                                                await community.update({ImageURL3 : fileName})
-                                        }
-                                }
-
+                if(await verify.verifyToken(fields.get('accessToken')) == false){
+                        if(fields.get('isCreate') == 1){
+                                res.status(404).send(null);
+                        }else{
                                 res.status(200).send(await communityPostFuncRouter.SelectByID(fields.get('id')));
-                        }).catch(err => {
-                                globalRouter.logger.error(URL + '/InsertOrModify CommunityPost update Failed ' + err);
-                                res.status(400).send(null);
-                        })
+                        }
+                        
+                }else{
+                        if(fields.get('isCreate') == 1) {
+                                await models.CommunityPost.create({
+                                        UserID : fields.get('userID'),
+                                        Category : fields.get('category'),
+                                        Kind : fields.get('kind'),
+                                        Location : fields.get('location'),
+                                        Title : fields.get('title'),
+                                        Contents : fields.get('contents'),
+                                        PetType : fields.get('petType'),
+                                        IsShow: true
+                                }).then(async result => {
+        
+                                        for(var i = 0 ; i < files.length ; ++i){
+        
+                                                var fileName = Date.now() + '.' + files[i].name.split('.').pop();
+        
+                                                s3Multer.formidableFileUpload(files[i], 'CommunityPhotos/' + result.id + '/' + fileName);
+                                                if(i == 0){
+                                                        await result.update({ImageURL1 : fileName})
+                                                }else if(i == 1){
+                                                        await result.update({ImageURL2 : fileName})
+                                                }else{
+                                                        await result.update({ImageURL3 : fileName})
+                                                }
+                                        }
+
+                                        await models.CommunityPostSubscriber.create({
+                                                PostID : result.id,
+                                                UserID : fields.get('userID')
+                                        }).catch(err => {
+                                                globalRouter.logger.error(URL + '/InsertOrModify CommunityPostSubscriber create Failed ' + err);
+                                        })
+        
+                                        res.status(200).send(await communityPostFuncRouter.SelectByID(result.id));
+                                }).catch(err => {
+                                        globalRouter.logger.error(URL + '/InsertOrModify CommunityPost create Failed ' + err);
+                                        res.status(400).send(null);
+                                })
+                        }else {
+        
+                                var community = await communityPostFuncRouter.SelectByID(fields.get('id'));
+        
+                                community = community['community'];
+                                community.update(
+                                        {
+                                                Title : fields.get('title'),
+                                                Contents : fields.get('contents')
+                                        },
+                                        {
+                                                where : {
+                                                        UserID : fields.get('userID')
+                                                }
+                                        }
+                                ).then(async communityPostResult => {
+                                        //기존 이미지 파일 삭제
+                                        for(var i = 0 ; i < remove_index_values.length; ++i){
+                                                var imageURL = community.ImageURL1;
+        
+                                                if(remove_index_values[i] == 2) imageURL = community.ImageURL2;
+                                                else if(remove_index_values[i] == 3) imageURL = community.ImageURL3;
+        
+                                                s3Multer.fileDelete('CommunityPhotos/' + fields.get('id'), imageURL);
+                                        }
+        
+                                        //기존 이미지 삭제
+                                        if(remove_index_values.length > 0){
+                                                await community.update({
+                                                        ImageURL1 : null,
+                                                        ImageURL2 : null,
+                                                        ImageURL3 : null
+                                                });
+                                        }
+        
+                                        //기존 이미지 순서 변경
+                                        for(var i = 0 ; i < image_url_values.length; ++i){
+                                                if(i == 0){
+                                                        await community.update({ImageURL1 : image_url_values[i]})
+                                                }else if(i == 1){
+                                                        await community.update({ImageURL2 : image_url_values[i]})
+                                                }else{
+                                                        await community.update({ImageURL3 : image_url_values[i]})
+                                                }
+                                        }
+        
+                                        //새로운 데이터 생성
+                                        for(var i = image_url_values.length ; i < image_url_values.length + files.length ; ++i){
+                                                var index = i - image_url_values.length;
+                                                var fileName = Date.now() + '.' + files[index].name.split('.').pop();
+        
+                                                s3Multer.formidableFileUpload(files[index], 'CommunityPhotos/' + fields.get('id') + '/' + fileName);
+        
+                                                if(i == 0){
+                                                        await community.update({ImageURL1 : fileName})
+                                                }else if(i == 1){
+                                                        await community.update({ImageURL2 : fileName})
+                                                }else{
+                                                        await community.update({ImageURL3 : fileName})
+                                                }
+                                        }
+        
+                                        res.status(200).send(await communityPostFuncRouter.SelectByID(fields.get('id')));
+                                }).catch(err => {
+                                        globalRouter.logger.error(URL + '/InsertOrModify CommunityPost update Failed ' + err);
+                                        res.status(400).send(null);
+                                })
+                        }
                 }
         }).on('error', function (err) { //에러나면, 파일저장 진행된 id 값의 폴더 하위부분을 날려버릴까?
                 globalRouter.logger.error('[error] error ' + err);
@@ -356,12 +366,10 @@ router.post('/Insert/Reply', async(req, res) => {
         })
 
         if(globalRouter.IsEmpty(communityPost)){
-                console.log(URL + '/Insert/Reply CommunityPost is Empty');
                 res.status(404).send(null);
                 return;
         }else{
                 if(communityPost.IsShow == 0){
-                        globalRouter.logger.error(URL + "/Insert/Reply is Empty or Delete Post");
                         res.status(404).send(null);
                         return;
                 }else{
@@ -372,56 +380,35 @@ router.post('/Insert/Reply', async(req, res) => {
                         }).then( async result => {
                                 console.log(URL + '/Insert/Reply create is success');
 
-                                //작성한 댓글에 대한 알림 구독
-                                await models.CommunityReplySubscriber.findOrCreate({
-                                        where : {
-                                                ReplyID : result.id,
-                                                UserID : req.body.userID,
-                                        },
-                                        defaults: {
-                                                ReplyID : result.id,
-                                                UserID : req.body.userID
-                                        }
-                                }).then(subscriberResult => {
-                                        console.log(URL + 'Insert/Reply CommunityReplySubscriber findOrCreate Success');
-                                }).catch(err => {
-                                        globalRouter.logger.error(URL + "/Insert/Reply CommunityReplySubscriber findOrCreate Failed" + err);
-                                })
-
                                 //FCM
-                                await models.CommunitySubscriber.findAll({
+                                await models.CommunityPostSubscriber.findAll({
                                         where : {
                                                 PostID : req.body.postID
                                         }
                                 }).then(async subResult => {
-                                        console.log(URL + '/Insert/Reply CommunitySubscriber findAll Success');
+
+                                        var user = await models.User.findOne({where: {userID : req.body.userID}});
 
                                         for(var i = 0 ; i < subResult.length; ++i){
                                                 if(subResult[i].UserID == req.body.userID) continue;
 
-                                                var tempData = subResult[i];
-                                                client.hgetall(String(subResult[i].UserID), async function(err, obj) {
-                                                        if(err) throw err;
-                                                        if(obj == null) erturn;
+                                                 var getAllRes = await getallAsync(String(subResult[i].UserID));
 
-                                                        var user = await models.user.findOne({where: {userID : req.body.userID}});
+                                                 var data = JSON.stringify({
+                                                         userID : req.body.userID,
+                                                         targetID : subResult[i].UserID,
+                                                         title : "새로운 댓글",
+                                                         type : "POST_REPLY",
+                                                         tableIndex : req.body.postID,
+                                                         body : user.NickName + "님이 댓글을 달았습니다.",
+                                                         isSend : getAllRes.isOnline,
+                                                 })
 
-                                                        var data = JSON.stringify({
-                                                                userID : req.body.userID,
-                                                                inviteID : tempData.UserID,
-                                                                title : "새로운 댓글",
-                                                                type : "POST_REPLY",
-                                                                tableIndex : req.body.postID,
-                                                                body : user.NickName + "님이 댓글을 달았습니다.",
-                                                                isSend : obj.isOnline,
-                                                        })
-
-                                                        if(fcmFuncRouter.SendFcmEvent(data)){
-                                                                console.log(URL + '/Insert/Reply fcm is true');
-                                                        }else{
-                                                                console.log(URL + '/Insert/Reply fcm is false');
-                                                        }
-                                                })
+                                                if(fcmFuncRouter.SendFcmEvent(data)){
+                                                        console.log(URL + '/Insert/Reply fcm is true');
+                                                }else{
+                                                        console.log(URL + '/Insert/Reply fcm is false');
+                                                }
                                         }
                                 })
 
@@ -434,7 +421,7 @@ router.post('/Insert/Reply', async(req, res) => {
         }
 })
 
-router.post('/Insert/ReplyReply', async(req, res) => {
+router.post('/Insert/ReplyReply', require('../../controllers/verifyToken'), async(req, res) => {
         let reply = await models.CommunityPostReply.findOne({
                 where : {
                         id : req.body.replyID
@@ -452,7 +439,6 @@ router.post('/Insert/ReplyReply', async(req, res) => {
                 })
 
                 if(globalRouter.IsEmpty(replyPost) || replyPost.IsShow == 0){
-                        console.log(URL + '/Insert/ReplyReply CommunityPost findOne is Empty Or Delete');
                         res.status(404).send(null);
                 }else{
                         await models.CommunityPostReplyReply.create({
@@ -460,44 +446,38 @@ router.post('/Insert/ReplyReply', async(req, res) => {
                                 ReplyID : req.body.replyID,
                                 Contents : req.body.contents
                         }).then(async result => {
-                                console.log(URL + '/Insert/ReplyReply CommunityPostReplyReply create Success');
 
                                 await models.CommunityReplySubscriber.findAll({
                                         where : {
-                                          ReplyID : body.replyID
+                                          ReplyID : req.body.replyID
                                         }
                                 }).then(async subResult => {
-                                        console.log(URL + 'CommunityReplySubscriber findAll Success');
+
+                                        var user = await models.User.findOne({where: {UserID: req.body.userID}});
 
                                         for(var i = 0 ; i < subResult.length; ++i){
-                                          if(subResult[i].UserID == req.body.userID) continue;
+                                                if(subResult[i].UserID == req.body.userID) continue;
 
-                                          var tempData = subResult[i];
+                                                var getAllRes = await getallAsync(String(subResult[i].UserID));
 
-                                          client.hgetall(String(subResult[i].UserID), async function(err, obj) {
-                                                if(err) throw err;
-                                                if(obj == null) return;
-                                        
-                                                var user = await models.User.findOne({where: {UserID: req.body.userID}});
-                                        
-                                                  var data = JSON.stringify({
-                                                    userID : req.body.userID,
-                                                    inviteID : tempData.UserID,
-                                                    title : "대댓글",
-                                                    type : "POST_REPLY_REPLY",
-                                                    tableIndex : reply.PostID,
-                                                    body : user.NickName + "님이 대댓글을 달았습니다.",
-                                                    isSend : obj.isOnline,
+                                                var data = JSON.stringify({
+                                                        userID : req.body.userID,
+                                                        targetID : subResult[i].UserID,
+                                                        title : "대댓글",
+                                                        type : "POST_REPLY_REPLY",
+                                                        tableIndex : reply.PostID,
+                                                        body : user.NickName + "님이 대댓글을 달았습니다.",
+                                                        isSend : getAllRes.isOnline,
                                                 })
-                                        
+
+
                                                 if(fcmFuncRouter.SendFcmEvent( data )){
-                                                  console.log(URL + 'InsertReply fcm is true');
-                                                  return;
+                                                        console.log(URL + 'InsertReply fcm is true');
+                                                        return;
                                                 }else{
-                                                  console.log(URL + 'InsertReply fcm is false');
-                                                  return;
+                                                        console.log(URL + 'InsertReply fcm is false');
+                                                        return;
                                                 }
-                                              });
                                         }
 
                                         res.status(200).send(result);
@@ -544,14 +524,12 @@ router.post('/InsertLike', async(req, res) => {
                                                                 RegisterTime : Date.now()
                                                         }
                                                 ).then(result => {
-                                                        console.log(URL + 'popular point is update success');
                                                 }).catch(err => {
                                                         console.log(URL + 'popular point is update failed' + err);
                                                 })
                                         //있으면 점수 update
                                         }else if(post.Type == 2){
                                                 popular.update({Point : likesLength - declareLength}).then(result => {
-                                                        console.log(URL + 'popular point is update success');
                                                 }).catch(err => {
                                                         console.log(URL + 'popular point is update failed' + err);
                                                 })
@@ -581,11 +559,9 @@ router.post('/InsertLike', async(req, res) => {
                                         })  
                                         
                                         if(fcmFuncRouter.SendFcmEvent( data )){
-                                                console.log(URL + 'InsertLike fcm is true');
                                                 res.status(200).send(result);
                                                 return;
                                         }else{
-                                                console.log(URL + 'InsertLike fcm is false');
                                                 res.status(400).send(result);
                                                 return;
                                         }
@@ -602,7 +578,6 @@ router.post('/InsertLike', async(req, res) => {
                                                                 RegisterTime : null
                                                         }
                                                 ).then(result => {
-                                                        console.log(URL + 'popular point is update success');
                                                 }).catch(err => {
                                                         console.log(URL + 'popular point is update failed' + err);
                                                 })
@@ -630,10 +605,6 @@ router.post('/Filter', async function(req, res){
         var rule = {};
 
         let kindList = globalRouter.getWords(kind);
-
-        for(var i = 0 ; i < kindList.length ; ++i){
-                kindList[i] = kindList[i].replace(' ', '')
-        }
 
         //전체가 아니고, 강아지, 고양이를 누르지 않았으면
         if(kindList[0] != '-1' ){
@@ -672,11 +643,11 @@ router.post('/Filter', async function(req, res){
         }
 
         if(Type == 1) {
+                console.log(req.body.type);
                 rule.Type = 1;
         }
 
         rule.IsShow = 1
-        console.log(rule);
 
         await models.CommunityPost.findAll({
                 limit : 30,
@@ -696,7 +667,6 @@ router.post('/Filter', async function(req, res){
                         }
                 ],
         }).then(async result => {
-                console.log(URL + 'Filter/Community Success');
 
                 let resData = [];
 
@@ -734,26 +704,449 @@ router.post('/Filter', async function(req, res){
 
                 res.status(200).send(resData);
         }).catch(err => {
-                globalRouter.logger.error(URL + 'Filter/Community Failed ' + err);
+                globalRouter.logger.error(URL + '/FilterFailed ' + err);
                 res.status(400).send(null);
         });
 })
 
-router.post('/Delete', async(req, res) => {
-        await models.CommunityPost.update(
-                {
-                        IsShow : 0
+router.post('/Search', async(req, res) => {
+        await models.CommunityPost.findAll({
+                where : {
+                        [Op.or] : {
+                                Title : {[Op.like] : '%' + req.body.keywords + '%'},
+                                Contents : {[Op.like] : '%' + req.body.keywords + '%'},
+                        },
+                        IsShow : 1
                 },
-                {
-                        where : { id : req.body.id }
+                include: [
+                        { 
+                                model : models.CommunityPostLike , 
+                                required: true, 
+                                limit: LIKES_LIMIT,
+                        },
+                        {
+                                model: models.CommunityPostReply,
+                                required: true,
+                                limit: LIKES_LIMIT
+                        }
+                ],
+                order: [['id', 'DESC']],
+        }).then(async result => {
+
+                let resData = [];
+
+                for(var i = 0 ; i < result.length; ++i){
+                        var declares = await models.CommunityPostDeclare.findAll({where : {TargetID : result[i].id}});
+                        var declareLength = declares.length;
+                        var community = result[i];
+
+                        var user = await models.User.findOne(
+                                {
+                                        attributes: [ 
+                                                "UserID", "NickName", "ProfileURL"
+                                        ],
+                                        where : {UserID : result[i].UserID}
+                                }
+                        );
+
+                        var userID = user.UserID;
+                        var nickName = user.NickName;
+                        var profileURL = user.ProfileURL;
+
+                        var temp = {
+                                userID,
+                                nickName,
+                                profileURL,
+                                community,
+                                declareLength
+                        }
+
+                        resData.push(temp);
                 }
-        ).then(result => {
-                console.log(URL + '/Delete update is success');
-                res.status(200).send(true);
+
+                if(globalRouter.IsEmpty(resData))
+                        resData = null;
+
+                res.status(200).send(resData);
         }).catch(err => {
-                globalRouter.logger.error(URL + 'Delete update is Failed ' + err);
+                globalRouter.logger.error(URL + '/Search CommunityPostReply findAll Failed' + err);
                 res.status(400).send(null);
-        });
+        })
+});
+
+router.post('/Delete', require('../../controllers/verifyToken'), async(req, res) => {
+        switch(req.body.postType){
+                case 0 :
+                {
+                        await models.CommunityPost.update(
+                                {
+                                        IsShow : 0
+                                },
+                                {
+                                        where : { id : req.body.id }
+                                }
+                        ).then(result => {
+                                res.status(200).send(true);
+                        }).catch(err => {
+                                globalRouter.logger.error(URL + 'Delete update is Failed ' + err);
+                                res.status(400).send(null);
+                        });
+                }
+                break;
+                case 1 :
+                {
+                        await models.CommunityPostReply.update(
+                                {
+                                        IsShow : 0
+                                },
+                                {
+                                        where : { id : req.body.id }
+                                }
+                        ).then(result => {
+                                res.status(200).send(true);
+                        }).catch(err => {
+                                globalRouter.logger.error(URL + 'Delete update is Failed ' + err);
+                                res.status(400).send(null);
+                        });
+                }
+                break;
+                case 2 : 
+                {
+                        await models.CommunityPostReplyReply.update(
+                                {
+                                        IsShow : 0
+                                },
+                                {
+                                        where : { id : req.body.id }
+                                }
+                        ).then(result => {
+                                res.status(200).send(true);
+                        }).catch(err => {
+                                globalRouter.logger.error(URL + 'Delete update is Failed ' + err);
+                                res.status(400).send(null);
+                        });
+                }
+                break;
+        }
+})
+
+router.post('/Declare', require('../../controllers/verifyToken'), async (req, res) => {
+        switch(req.body.postType){
+          case 0:
+            {
+              await models.CommunityPostDeclare.findOrCreate({
+                where: {
+                  UserID : req.body.userID,
+                  TargetID : req.body.targetID,
+                },
+                defaults: {
+                  UserID : req.body.userID,
+                  TargetID : req.body.targetID,
+                  Contents : req.body.contents,
+                  Type : req.body.type
+                }
+              }).then( result => {
+                res.status(200).send(result);
+              }).catch( err => {
+                globalRouter.logger.error(URL + "/Declare findOrCreate Faield" + err);
+                res.status(400).send(null);
+              })
+            }
+            break;
+          case 1:
+            {
+              await models.CommunityPostReplyDeclare.findOrCreate({
+                where: {
+                  UserID : req.body.userID,
+                  TargetID : req.body.targetID,
+                },
+                defaults: {
+                  UserID : req.body.userID,
+                  TargetID : req.body.targetID,
+                  Contents : req.body.contents,
+                  Type : req.body.type
+                }
+              }).then( result => {
+                res.status(200).send(result);
+              }).catch( err => {
+                globalRouter.logger.error(URL + "/Declare CommunityReplyDeclare findOrCreate Faield" + err);
+                res.status(400).send(null);
+              })
+            }
+            break;
+          case 2:
+            {
+              await models.CommunityPostReplyReplyDeclare.findOrCreate({
+                where: {
+                  UserID : req.body.userID,
+                  TargetID : req.body.targetID,
+                },
+                defaults: {
+                  UserID : req.body.userID,
+                  TargetID : req.body.targetID,
+                  Contents : req.body.contents,
+                  Type : req.body.type
+                }
+              }).then( result => {
+                res.status(200).send(result);
+              }).catch( err => {
+                globalRouter.logger.error(URL + "/Declare CommunityReplyReplyDeclare findOrCreate Faield" + err);
+                res.status(400).send(null);
+              })
+            }
+            break;
+        }
+      });
+
+router.post('/Select/ByUserID', async(req, res) => {
+        await models.CommunityPost.findAll({
+		order : [
+			['id', 'DESC']
+                ],
+                include: [
+                        { 
+                                model : models.CommunityPostLike , 
+                                required: true, 
+                                limit: LIKES_LIMIT,
+                        },
+                        {
+                                model: models.CommunityPostReply,
+                                required: true,
+                                limit: LIKES_LIMIT
+                        }
+                ],
+                where: {
+                        IsShow : 1,
+                        UserID : req.body.userID
+                }
+        }).then(async result => {
+                let resData = [];
+
+                for(var i = 0 ; i < result.length; ++i){
+                        var declares = await models.CommunityPostDeclare.findAll({where : {TargetID : result[i].id}});
+                        var declareLength = declares.length;
+                        var community = result[i];
+
+                        var user = await models.User.findOne(
+                                {
+                                        attributes: [ 
+                                                "UserID", "NickName", "ProfileURL"
+                                        ],
+                                        where : {UserID : result[i].UserID}
+                                }
+                        );
+
+                        var userID = user.UserID;
+                        var nickName = user.NickName;
+                        var profileURL = user.ProfileURL;
+
+                        var temp = {
+                                userID,
+                                nickName,
+                                profileURL,
+                                community,
+                                declareLength
+                        }
+
+                        resData.push(temp);
+                }
+
+                if(globalRouter.IsEmpty(resData))
+                        resData = null;
+
+                res.status(200).send(resData);
+        }).catch(err => {
+                globalRouter.logger.error(URL + '/Select/ByUserID CommunityPostReply findAll Failed' + err);
+                res.status(400).send(null);
+        })
+})
+
+router.post('/Select/ReplyByUserID', async(req, res) => {
+        let reply = await models.CommunityPostReply.findAll({
+                attributes: [
+                        [models.sequelize.fn('DISTINCT', models.sequelize.col('PostID')) ,'PostID'],
+                ],
+                where: {
+                        IsShow : 1,
+                        UserID : req.body.userID
+                },
+                order : [
+			['id', 'DESC']
+                ],
+        })
+
+        //비어있으면
+        if(globalRouter.IsEmpty(reply)){
+                res.status(200).send(false);
+        }else{
+                let resData = [];
+                for(var i = 0 ; i < reply.length; ++i){
+                        await models.CommunityPost.findOne({
+                                where : {
+                                        IsShow : 1,
+                                        id : reply[i].PostID
+                                },
+                                include: [
+                                        { 
+                                                model : models.CommunityPostLike , 
+                                                required: true, 
+                                                limit: LIKES_LIMIT,
+                                        },
+                                        {
+                                                model: models.CommunityPostReply,
+                                                required: true,
+                                                limit: LIKES_LIMIT
+                                        }
+                                ],
+                        }).then(async result => {
+                                var declares = await models.CommunityPostDeclare.findAll({where : {TargetID : result.id}});
+                                var declareLength = declares.length;
+                                var community = result;
+        
+                                var user = await models.User.findOne(
+                                        {
+                                                attributes: [ 
+                                                        "UserID", "NickName", "ProfileURL"
+                                                ],
+                                                where : {UserID : result.UserID}
+                                        }
+                                );
+        
+                                var userID = user.UserID;
+                                var nickName = user.NickName;
+                                var profileURL = user.ProfileURL;
+        
+                                var temp = {
+                                        userID,
+                                        nickName,
+                                        profileURL,
+                                        community,
+                                        declareLength
+                                }
+        
+                                if(globalRouter.IsEmpty(temp) == false)
+                                        resData.push(temp);
+                        }).catch(err => {
+                                globalRouter.logger.error(URL + '/Select/ByUserID CommunityPostReply findAll Failed' + err);
+                        })
+                }
+
+                if(globalRouter.IsEmpty(resData)){
+                        res.status(200).send(null);
+                }else{
+                        res.status(200).send(resData);
+                }
+        }
+})
+
+router.post('/Select/LikeByUserID', async(req, res) => {
+        let like = await models.CommunityPostLike.findAll({
+                where: {
+                        UserID : req.body.userID
+                },
+                order : [
+			['id', 'DESC']
+                ],
+        })
+
+        //비어있으면
+        if(globalRouter.IsEmpty(like)){
+                res.status(200).send(null);
+        }else{
+                let resData = [];
+                for(var i = 0 ; i < like.length; ++i){
+                        await models.CommunityPost.findOne({
+                                where : {
+                                        IsShow : 1,
+                                        id : like[i].PostID
+                                },
+                                include: [
+                                        { 
+                                                model : models.CommunityPostLike , 
+                                                required: true, 
+                                                limit: LIKES_LIMIT,
+                                        },
+                                        {
+                                                model: models.CommunityPostReply,
+                                                required: true,
+                                                limit: LIKES_LIMIT
+                                        }
+                                ],
+                        }).then(async result => {
+                                var index = resData.findIndex(function(item, index, arr){
+                                        return item['community'].id == result.id 
+                                });
+
+                                if(index == -1){
+                                        var declares = await models.CommunityPostDeclare.findAll({where : {TargetID : result.id}});
+                                        var declareLength = declares.length;
+                                        var community = result;
+                
+                                        var user = await models.User.findOne(
+                                                {
+                                                        attributes: [ 
+                                                                "UserID", "NickName", "ProfileURL"
+                                                        ],
+                                                        where : {UserID : result.UserID}
+                                                }
+                                        );
+                
+                                        var userID = user.UserID;
+                                        var nickName = user.NickName;
+                                        var profileURL = user.ProfileURL;
+                
+                                        var temp = {
+                                                userID,
+                                                nickName,
+                                                profileURL,
+                                                community,
+                                                declareLength
+                                        }
+                
+                                        if(globalRouter.IsEmpty(temp) == false)
+                                                resData.push(temp);
+                                }
+                                
+                        }).catch(err => {
+                                globalRouter.logger.error(URL + '/Select/ByUserID CommunityPostReply findAll Failed' + err);
+                        })
+                }
+
+                if(globalRouter.IsEmpty(resData)){
+                        res.status(200).send(null);
+                }else{
+                        res.status(200).send(resData);
+                }
+        }
+})
+
+router.post('/Select/Subscribe', async(req, res) => {
+        await models.CommunityPostSubscriber.findOne({
+          where : {
+            PostID : req.body.postID,
+            UserID : req.body.userID,
+          }
+        }).then( result => {
+          res.status(200).send(result);
+        }).catch( err => {
+          globalRouter.logger.error(URL + "/Select/Subscribe CommunitySubscriber findOne Faield" + err);
+          res.status(400).send(null);
+        })
+      })
+
+//게시글 알림
+router.post('/Update/Subscribe', async(req, res)=>{
+        globalRouter.CreateOrDestroy(models.CommunityPostSubscriber,
+                {
+                PostID : req.body.postID,
+                UserID : req.body.userID,
+                }
+        ).then( result => {
+                res.status(200).send(result);
+        }).catch( err => {
+                globalRouter.logger.error(URL + "/Update/Subscribe CommunitySubscriber findOrCreate Faield" + err);
+                res.status(400).send(null);
+        })
 })
 
 module.exports = router;

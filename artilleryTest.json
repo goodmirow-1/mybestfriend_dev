@@ -1,0 +1,25 @@
+{
+  "config": {
+    "target": "http://61.101.55.40:20001",
+    "phases": [
+      {"duration": 60, "arrivalRate": 10}
+    ],
+    "defaults": {
+      "headers": {
+        "User-Agent": "Artillery"
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "flow": [
+	{"post":
+	 {
+	   "url" : "/Pet/Select/IntakeDataTest",
+	   "json": {"id":279,"petID":2}
+	 }
+	}
+      ]
+    }
+  ]
+}

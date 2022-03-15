@@ -19,6 +19,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    LoginType: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
+    },
     NickName: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -72,6 +76,9 @@ module.exports = (sequelize, DataTypes) => {
     this.hasMany(models.Pet, {
       foreignKey: 'UserID'
     });
+    this.hasMany(models.CommunityPost, {
+      foreignKey: 'UserID'
+    })
   };
   return User;
 };

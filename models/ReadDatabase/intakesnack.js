@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class BowlDeviceTable extends Model {
+  class IntakeSnack extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -15,21 +15,16 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey : "PetID",
         onDelete : "cascade",
       });
-
-      this.hasMany( models.Intake, {
-        foreignKey: "id",
-        onDelete : "cascade",
-      })
     }
   };
-  BowlDeviceTable.init({
+  IntakeSnack.init({
     PetID: DataTypes.INTEGER,
-    UUID: DataTypes.STRING,
-    BowlWeight: DataTypes.DOUBLE,
-    Type: DataTypes.INTEGER
+    SnackID: DataTypes.INTEGER,
+    Amount: DataTypes.DOUBLE,
+    Time: DataTypes.DATE
   }, {
     sequelize,
-    modelName: 'BowlDeviceTable',
+    modelName: 'IntakeSnack',
   });
-  return BowlDeviceTable;
+  return IntakeSnack;
 };

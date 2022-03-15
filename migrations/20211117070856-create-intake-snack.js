@@ -1,40 +1,36 @@
 'use strict';
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('UserFoodTypeTables', {
+    await queryInterface.createTable('IntakeSnacks', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      UserID: {
+      PetID: {
         type: Sequelize.INTEGER,
+        references: {
+          model : 'Pets',
+          key : 'id',
+        },
       },
-      BrandName: {
-        type: Sequelize.STRING
+      SnackID: {
+        type: Sequelize.INTEGER
       },
-      KoreaName: {
-        type: Sequelize.STRING
+      Amount: {
+        type: Sequelize.DOUBLE
       },
-      EnglishName: {
-        type: Sequelize.STRING
-      },
-      PerProtein: {
-        type: Sequelize.DOUBLE,
-        defaultValue: 0.0
-      },
-      PerFat: {
-        type: Sequelize.DOUBLE,
-        defaultValue: 0.0
-      },
-      Carbohydrate: {
+      Water: {
         type: Sequelize.DOUBLE,
         defaultValue: 0.0
       },
       Calorie: {
         type: Sequelize.INTEGER,
         defaultValue: 0
+      },
+      Time: {
+        type: Sequelize.DATE
       },
       createdAt: {
         allowNull: false,
@@ -47,6 +43,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('UserFoodTypeTables');
+    await queryInterface.dropTable('IntakeSnacks');
   }
 };

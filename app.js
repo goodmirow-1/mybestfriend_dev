@@ -11,8 +11,8 @@ const models = require("./models/index.js");
 const fs = require('fs');
 const path = require('path');
 const mime = require('mime');
-const expressEjsLayout = require('express-ejs-layouts');
 const schedule = require('node-schedule');
+const bodyParserErrorHandler = require('express-body-parser-error-handler')
 
 const userRouter = require('./routes/user/userRouter'),
 		petRouter = require('./routes/pet/petRouter'),
@@ -21,6 +21,7 @@ const userRouter = require('./routes/user/userRouter'),
 		communityPostRouter = require('./routes/communitypost/communityPostRouter'),
 		bowlRouter = require('./routes/bowl/bowlRouter');
 
+const fcmFuncRouter = require('./routes/fcm/fcmFuncRouter');
 const globalRouter = require('./routes/global');
 
 const app = express();
@@ -30,12 +31,22 @@ var jobList= [];
 require('moment-timezone');
 moment.tz.setDefault("Asia/Seoul");
 
-app.set('view engine', 'ejs');
-app.use(expressEjsLayout);
+// Require static assets from public folder
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Set 'views' directory for any views 
+// being rendered res.render()
+app.set('views', path.join(__dirname, 'views'));
+
+// Set view engine as EJS
+app.engine('html', require('ejs').renderFile);
+app.set('view engine', 'html');
+
 app.use(methodOverride('_method'));
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(bodyParserErrorHandler());
 app.use(express.static(__dirname));
 app.use(helmet());
 
@@ -57,21 +68,9 @@ const server = app.listen(app.get('port'), () => {
 
 // sequelize 연동
 models.sequelize.sync().then( () => {
-	console.log("DB Connect Success");
-
-	//Schdule 등록
-	//매일 11시						초 분 시 일 월 주
-	var job = schedule.scheduleJob('00 00 11 * * *', function() {
-		//Temp에 등록된 데이터 삭제
-		let mNow = new Date();
-		console.log('remove temp folder call');
-		console.log(mNow);
-		globalRouter.removefiles('./AllPhotos/Temp/');
-	});
-
-	jobList.push(job);
+	console.log("Write DB Connect Success");
 }).catch( err => {
-    console.log("DB Connect Faield");
+    console.log("Write DB Connect Faield");
     console.log(err);
 })
 
@@ -109,7 +108,7 @@ function shutDown() {
 
 	setTimeout(() => {
 		console.log('Could not close connections in time, forcefully shutting down');
-		process.exit(1);
+		process.exiit(1);
 	}, 10000);
 }
 
@@ -167,74 +166,63 @@ app.post('/file_upload', function(req, res, next) {
 	  });
 });
 
-let sendDataList = [];
-
-app.post('/Send/Data', function(req, res) {
-	let body = req.body; 
-
-	if(globalRouter.IsEmpty( JSON.stringify(body))){
-		console.log('/Send/Data is empty');
-		res.json({"msg" : "NO"});
-	}else{
-
-		var data = {
-			ID : body.ID,
-			Weight : body.Weight,
-			Wobble : body.Wobble,
-			Time : moment().format('YYYY-MM-DD HH:mm:ss')
-		  };
-
-		console.log(body);
-		sendDataList.push(data);
-		res.json({"msg" : "OK"});
-	}
-});
-
-app.get('/Get/Data', function(req, res) {
-	res.json(sendDataList.reverse());
-});
-
 let version =  "v0.1";
 
 app.post('/Check/Version', function(req, res) {
-	if(globalRouter.IsEmpty( req.body.uuid )){
-		console.log('/Check/Living is empty');
-		res.json({"msg" : "EMPTY"});
-	}else{
-		console.log(req.body.uuid);
+	fs.readFile(__dirname + "/files" + "/version.txt", 'utf-8', function(err, data) {
+		if(err){
+			console.log(err);
+			res.json({"msg" : "version.txt file is wrong"});
+			return;
+		}else{
+			console.log(data);
+			res.json({"msg" : data});
+		}
+	})
+});
 
-		fs.readFile(__dirname + "/files" + "/version.txt", 'utf-8', function(err, data) {
-			if(err){
-				console.log(err);
-				res.json({"msg" : "version.txt file is wrong"});
-				return;
-			}else{
-				console.log(data);
-				res.json({"msg" : data});
+app.post('/Check/Alive' , async function(req, res) {
+	//배터리 잔량 update
+	models.BowlDeviceTable.update(
+		{
+			Battery : req.body.bat
+		},
+		{
+			where : { 
+				PetID : req.body.id,
+				Type: req.body.bowlType
 			}
+		}
+	)
+
+	if(req.body.bat <= 1){
+		var pet = await models.Pet.findOne(
+			{
+					attributes: ["UserID"],
+					where : {id : req.body.id}
+			}
+	   );
+
+	   var bodyMessage = ((req.body.bowlType == 0 ? "밥 그릇" : "물 그릇") + "의 기기 배터리가 얼마 남지 않았어요.");
+
+        var data = JSON.stringify({
+            userID : 1,             //마이베프
+            targetID : pet.UserID,
+            title : "기기 알림",
+            type : "NEED_BATTERY_CHECK",
+            tableIndex : req.body.id,	//펫 아이디
+            body : bodyMessage,
+            isSend : 0          //1은 로그인 할 때 처리
 		})
+		
+		if(await fcmFuncRouter.SendFcmEvent( data )){
+        }else{
+            console.log('Schedule/Do/CheckIntakes fcm is failed');
+        }
 	}
+
+	res.json({"msg" : "OK"});
 });
-
-
-app.get('/Schedule/TempPhotoClear', function(req, res) {
-	var job = schedule.scheduleJob('00 00 11 * * *', function() {
-		let mNow = new Date();
-		console.log('remove temp folder call');
-		console.log(mNow);
-		globalRouter.removefiles('./AllPhotos/Temp/');
-	});
-
-	jobList.push(job);
-	res.status(200).send(true);
-});
-
-app.get('/Schedule/Cancel' , function(req, res) {
-	for(var i = 0 ; i < jobList.length; ++i){
-		jobList[i].cancel();
-	}
-});
-
 
 const client = globalRouter.client;
 app.post('/OnResume', async(req, res) => {
@@ -253,78 +241,56 @@ app.post('/OnPause', async(req, res) => {
 	res.status(200).send(true);
 })
 
-const s3Multer = require('./routes/multer');
-app.post('/Test', async(req, res) => {
-	await models.User.findOne({
-        where : {
-            Email : req.body.email
-        },
-        include : [
-            {
-                    model : models.Pet,
-					required : true,
-					limit: 99,
-                    order : [
-                                    ['id', 'DESC']
-                    ],
-                    include : [
-                        {
-                                model : models.PetPhoto,
-                                required : true,
-                                limit : 5,
-                                order : [
-                                                ['Index', 'ASC']
-                                ]
-                        },
-                        {
-                                model : models.BowlDeviceTable,
-                                required : true,
-                                limit : 2,  //밥그릇, 물그릇
-                                order : [
-                                                ['id', 'DESC']
-                                ]
-                        },
-		            ]
-            }
-        ]
-    }).then(result => {
-        console.log(URL + '/DebugLogin User findOne is Success');
-            //로그인 정보가 없을 때
-        if(globalRouter.IsEmpty(result)){
-            res.status(200).send(null);
-            return;
-        }else{
-            const payload = {
-                Email : req.body.email
-            };
-
-            const secret = tokenController.getSecret(ACCESS_TOKEN);
-            const refsecret = tokenController.getSecret(REFRESH_TOKEN);
-        
-            const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
-            const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
-            console.log("refreshtoken:" + reftoken);
-
-            let value = {
-                RefreshToken: reftoken 
-              }
-          
-            var resData = {
-                result,
-                AccessToken: token,
-                RefreshToken: reftoken,
-                AccessTokenExpiredAt: (tokenController.getExpired(token) - 65000).toString(),
-            };
-
-            result.update(value).then(result2 => {
-                res.status(200).send(resData);
-            }).catch(err => {
-                console.log(URL + '/DebugLogin User Update is failed' + err);
-                res.status(400).send(null);
-            })
-        }
-    }).catch(err => {
-        globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
-        res.status(400).send(null);
-    })
+const axios = require('axios');
+app.get("/certifications/redirect", async (req, res) => {
+	res.status(200).send(true);
 })
+
+app.post("/certifications/check", async (req, res) => {
+	try {
+		// 인증 토큰 발급 받기
+		const getToken = await axios({
+		  url: "https://api.iamport.kr/users/getToken",
+		  method: "post", // POST method
+		  headers: { "Content-Type": "application/json" }, // "Content-Type": "application/json"
+		  data: {
+			imp_key: "0291562377159414", // REST API키
+			imp_secret: "315230864b907e5d4103fc1e7d5fde4b62201092bdf482decb0cfd5153856b0244c89f0a484ebbc5" // REST API Secret
+		  }
+		});
+		
+		const { access_token } = getToken.data.response; // 인증 토큰
+		// imp_uid로 인증 정보 조회
+		const getCertifications = await axios({
+		  url: "https://api.iamport.kr/certifications/" + req.body.imp_uid,
+		  method: "get", // GET method
+		  headers: { "Authorization": access_token } // 인증 토큰 Authorization header에 추가
+		});
+		const certificationsInfo = getCertifications.data.response; // 조회한 인증 정보
+		res.status(200).send(certificationsInfo);
+		//res.redirect('/certifications/check?result=' + true);
+	  } catch(e) {
+		console.error(e);
+		//res.redirect('/certifications/check?result=' + false);
+		res.status(404).send(null);
+	  }
+})
+
+app.post("/Fixed/FeedID", async( req, res) => {
+	await models.Pet.findAll({
+
+	}).then(result => {
+		console.log('fixed feedid err');
+
+		for(var i = 0 ; i < result.length; ++i){
+			result[i].update({
+				FoodID : 0
+			})
+		}
+
+		res.status(200).send(true);
+	}).catch(err => {
+		console.log('fixed feedid err');
+		res.status(404).send(null);
+	})
+});

@@ -6,6 +6,10 @@ const router = require('express').Router(),
 const { Op } = require('sequelize');
 
 const client = globalRouter.client;
+const moment = require('moment');
+
+require('moment-timezone');
+moment.tz.setDefault("Asia/Seoul");
 
 var serviceAccount = require("../../keys/myvef-bowl-firebase-adminsdk-lmhrd-25e0fa3d39.json");
 admin.initializeApp({
@@ -58,7 +62,7 @@ router.post('/Token/Save',async (req,res) => {
                 }
             }
         }).then( function(result, err) {
-            if(err) console.log(URL + 'Token/Save Destroy Failed' + err);
+            if(err) globalRouter.logger.error(URL + 'Token/Save Destroy Failed' + err);
             else{
                 console.log(URL + 'Token/Save Destroy success' + result);
             }
@@ -88,8 +92,20 @@ router.post('/Token/Save',async (req,res) => {
     }
 });
 
-router.post('/DetailAlarmSetting', async(req,res) => {
+router.post('/DetailAlarmSetting', require('../../controllers/verifyToken'), async(req,res) => {
     let body = req.body;
+    
+    await models.User.update(
+        {
+            MarketingAgree: body.marketing,
+            MarketingAgreeTime : body.marketing == true ? moment().format('YYYY-MM-DD HH:mm:ss') : null
+        },
+        {
+            where : {
+                UserID : body.userID
+            }
+        }
+    )
 
     await models.FcmTokenList.update(
         {
@@ -108,7 +124,7 @@ router.post('/DetailAlarmSetting', async(req,res) => {
         console.log(URL + 'DetailAlarmSetting' + result);
         res.status(200).send(result);
     }).catch(err => {
-        console.log(URL + 'DetailAlarmSetting' + err);
+        globalRouter.logger.error(URL + 'DetailAlarmSetting' + err);
         res.status(400).send(null);
     })
 });

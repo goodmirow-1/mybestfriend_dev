@@ -16,7 +16,7 @@ module.exports = {
       },
       LoginType: {
         type: Sequelize.INTEGER(1),
-        defaultValue: "0"
+        defaultValue: 0
       },
       NickName: {
         type: Sequelize.STRING(40)
