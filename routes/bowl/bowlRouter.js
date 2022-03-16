@@ -49,19 +49,6 @@ router.post('/Disconnect/Pet', require('../../controllers/verifyToken'), async(r
                 where : {id : req.body.id}
         })
 
-        // //기기 연결 시에 맨마지막 데이터를 삭제함
-        // await models.Intake.create({
-        //         PetID : bowl.PetID,
-        //         BowlWeight : 0.0,
-        //         Amount : 0.0,
-        //         BowlType : bowl.Type,
-        //         State : 3,
-        // }).then(result => {
-        //         console.log(URL + '/Insert/Intake Intake create Success');
-        // }).catch(err => {
-        //         console.log(URL + '/Insert/Intake Intake create Failed ' + err);
-        // })
-
         bowl.update(
                 {
                         PetID : null,
@@ -81,8 +68,6 @@ router.post('/Disconnect/Pet', require('../../controllers/verifyToken'), async(r
 });
 
 router.post('/Update/BowlWeight', async(req,res) => {
-
-
         await models.BowlDeviceTable.update(
                 {
                         BowlWeight : req.body.bw,
@@ -93,7 +78,6 @@ router.post('/Update/BowlWeight', async(req,res) => {
                         }
                 }
         ).then(result => {
-                console.log('/Update/BowlWeight weight update Success');
                 res.status(200).send(result);
         }).catch(err => {
                 globalRouter.logger.error(URL + '/Update/BowlWeight weight update Failed ' + err);

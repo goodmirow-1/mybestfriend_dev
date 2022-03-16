@@ -84,9 +84,6 @@ router.post('/Select/WithCommunity', async(req, res) => {
             {
                 model : models.CommunityPost,
                 required : false,
-                order : [
-                    ['id', 'DESC']
-                ],
                 include: [
                     { 
                             model : models.CommunityPostLike , 
@@ -121,8 +118,14 @@ router.post('/Select/WithCommunity', async(req, res) => {
                 communityList.push(temp);
         }
 
-        if(globalRouter.IsEmpty(communityList))
+        if(globalRouter.IsEmpty(communityList)){
             communityList = null;
+        }
+        else{
+            communityList.sort(function (a,b){
+                return b['community'].id - b['community'].id;
+            });
+        }
 
         var userID = result.UserID;
         var nickName = result.NickName;
@@ -417,7 +420,7 @@ router.post('/DebugLogin', async(req, res) => {
                 result,
                 AccessToken: token,
                 RefreshToken: reftoken,
-                AccessTokenExpiredAt: (tokenController.getExpired(token) - 65000).toString(),
+                AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
             };
 
             result.update(value).then(result2 => {
@@ -498,7 +501,7 @@ router.post('/Login', async(req,res) => {
                         result,
                         AccessToken: token,
                         RefreshToken: reftoken,
-                        AccessTokenExpiredAt: (tokenController.getExpired(token) - 65000).toString(),
+                        AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
                     }
     
                     console.log("WHAT  IS  RESULT.UserID   :",result.UserID)
@@ -588,7 +591,7 @@ router.post('/Login/Social', async(req, res) => {
                         result: result,
                         AccessToken: token,
                         RefreshToken: reftoken,
-                        AccessTokenExpiredAt: (tokenController.getExpired(token) - 65000).toString(),
+                        AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
                     }
         
                     models.User.update( //reftoken 값 update

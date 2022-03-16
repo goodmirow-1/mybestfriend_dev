@@ -361,7 +361,8 @@ router.post('/InsertOrModify', async(req, res) => {
 router.post('/Insert/Reply', async(req, res) => {
         let communityPost = await models.CommunityPost.findOne({
                 where : {
-                        id : req.body.postID
+                        id : req.body.postID,
+                        IsShow : 1
                 }
         })
 
@@ -378,7 +379,6 @@ router.post('/Insert/Reply', async(req, res) => {
                                 PostID : req.body.postID,
                                 Contents : req.body.contents
                         }).then( async result => {
-                                console.log(URL + '/Insert/Reply create is success');
 
                                 //FCM
                                 await models.CommunityPostSubscriber.findAll({
@@ -424,17 +424,18 @@ router.post('/Insert/Reply', async(req, res) => {
 router.post('/Insert/ReplyReply', require('../../controllers/verifyToken'), async(req, res) => {
         let reply = await models.CommunityPostReply.findOne({
                 where : {
-                        id : req.body.replyID
+                        id : req.body.replyID,
+                        IsShow : 1
                 }
         })
 
         if(globalRouter.IsEmpty(reply)){
-                console.log(URL + '/Insert/ReplyReply CommunityPostReply findOne is Empty');
                 res.status(404).send(null);
         }else{
                 let replyPost = await models.CommunityPost.findOne({
                         where : {
-                                id : reply.PostID
+                                id : reply.PostID,
+                                IsShow : 1
                         }
                 })
 
@@ -501,7 +502,10 @@ router.post('/InsertLike', async(req, res) => {
           }, 
         ).then(async function(result) {
 
-                var post = await models.CommunityPost.findOne({where : {id : req.body.postID}});
+                var post = await models.CommunityPost.findOne({where : {
+                        id : req.body.postID,
+                        IsShow : 1
+                }});
 
                 if(globalRouter.IsEmpty(post)){
                         res.status(200).send(null);
@@ -643,11 +647,11 @@ router.post('/Filter', async function(req, res){
         }
 
         if(Type == 1) {
-                console.log(req.body.type);
                 rule.Type = 1;
         }
-
+        
         rule.IsShow = 1
+        console.log(rule);
 
         await models.CommunityPost.findAll({
                 limit : 30,
@@ -983,7 +987,6 @@ router.post('/Select/ReplyByUserID', async(req, res) => {
                 for(var i = 0 ; i < reply.length; ++i){
                         await models.CommunityPost.findOne({
                                 where : {
-                                        IsShow : 1,
                                         id : reply[i].PostID
                                 },
                                 include: [
@@ -999,33 +1002,36 @@ router.post('/Select/ReplyByUserID', async(req, res) => {
                                         }
                                 ],
                         }).then(async result => {
-                                var declares = await models.CommunityPostDeclare.findAll({where : {TargetID : result.id}});
-                                var declareLength = declares.length;
-                                var community = result;
-        
-                                var user = await models.User.findOne(
-                                        {
-                                                attributes: [ 
-                                                        "UserID", "NickName", "ProfileURL"
-                                                ],
-                                                where : {UserID : result.UserID}
+                                if(result.IsShow == 1){
+                                        var declares = await models.CommunityPostDeclare.findAll({where : {TargetID : result.id}});
+                                        var declareLength = declares.length;
+                                        var community = result;
+                
+                                        var user = await models.User.findOne(
+                                                {
+                                                        attributes: [ 
+                                                                "UserID", "NickName", "ProfileURL"
+                                                        ],
+                                                        where : {UserID : result.UserID}
+                                                }
+                                        );
+                
+                                        var userID = user.UserID;
+                                        var nickName = user.NickName;
+                                        var profileURL = user.ProfileURL;
+                
+                                        var temp = {
+                                                userID,
+                                                nickName,
+                                                profileURL,
+                                                community,
+                                                declareLength
                                         }
-                                );
+
         
-                                var userID = user.UserID;
-                                var nickName = user.NickName;
-                                var profileURL = user.ProfileURL;
-        
-                                var temp = {
-                                        userID,
-                                        nickName,
-                                        profileURL,
-                                        community,
-                                        declareLength
+                                        if(globalRouter.IsEmpty(temp) == false)
+                                                resData.push(temp);
                                 }
-        
-                                if(globalRouter.IsEmpty(temp) == false)
-                                        resData.push(temp);
                         }).catch(err => {
                                 globalRouter.logger.error(URL + '/Select/ByUserID CommunityPostReply findAll Failed' + err);
                         })
@@ -1057,7 +1063,6 @@ router.post('/Select/LikeByUserID', async(req, res) => {
                 for(var i = 0 ; i < like.length; ++i){
                         await models.CommunityPost.findOne({
                                 where : {
-                                        IsShow : 1,
                                         id : like[i].PostID
                                 },
                                 include: [
@@ -1073,40 +1078,43 @@ router.post('/Select/LikeByUserID', async(req, res) => {
                                         }
                                 ],
                         }).then(async result => {
-                                var index = resData.findIndex(function(item, index, arr){
-                                        return item['community'].id == result.id 
-                                });
-
-                                if(index == -1){
-                                        var declares = await models.CommunityPostDeclare.findAll({where : {TargetID : result.id}});
-                                        var declareLength = declares.length;
-                                        var community = result;
-                
-                                        var user = await models.User.findOne(
-                                                {
-                                                        attributes: [ 
-                                                                "UserID", "NickName", "ProfileURL"
-                                                        ],
-                                                        where : {UserID : result.UserID}
+                                if(result.IsShow == 1){
+                                        var index = resData.findIndex(function(item, index, arr){
+                                                return item['community'].id == result.id 
+                                        });
+        
+                                        if(index == -1){
+                                                var declares = await models.CommunityPostDeclare.findAll({where : {TargetID : result.id}});
+                                                var declareLength = declares.length;
+                                                var community = result;
+                        
+                                                var user = await models.User.findOne(
+                                                        {
+                                                                attributes: [ 
+                                                                        "UserID", "NickName", "ProfileURL"
+                                                                ],
+                                                                where : {UserID : result.UserID}
+                                                        }
+                                                );
+                        
+                                                var userID = user.UserID;
+                                                var nickName = user.NickName;
+                                                var profileURL = user.ProfileURL;
+                        
+                                                var temp = {
+                                                        userID,
+                                                        nickName,
+                                                        profileURL,
+                                                        community,
+                                                        declareLength
                                                 }
-                                        );
-                
-                                        var userID = user.UserID;
-                                        var nickName = user.NickName;
-                                        var profileURL = user.ProfileURL;
-                
-                                        var temp = {
-                                                userID,
-                                                nickName,
-                                                profileURL,
-                                                community,
-                                                declareLength
-                                        }
-                
-                                        if(globalRouter.IsEmpty(temp) == false)
-                                                resData.push(temp);
-                                }
+                        
                                 
+                                                if(globalRouter.IsEmpty(temp) == false)
+                                                        resData.push(temp);
+                                                
+                                        }
+                                }
                         }).catch(err => {
                                 globalRouter.logger.error(URL + '/Select/ByUserID CommunityPostReply findAll Failed' + err);
                         })
