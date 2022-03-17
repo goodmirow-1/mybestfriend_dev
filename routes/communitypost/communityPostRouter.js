@@ -465,23 +465,24 @@ router.post('/Insert/ReplyReply', require('../../controllers/verifyToken'), asyn
                                 ReplyID : req.body.replyID,
                                 Contents : req.body.contents
                         }).then(async result => {
+                                if(req.body.userID != reply.UserID){
+                                        var getAllResTwo = await getallAsync(String(reply.UserID));
 
-                                var getAllResTwo = await getallAsync(String(reply.UserID));
-
-                                var data = JSON.stringify({
-                                        userID : req.body.userID,
-                                        targetID : reply.UserID,
-                                        title : "대댓글",
-                                        type : "POST_REPLY_REPLY",
-                                        tableIndex : reply.PostID,
-                                        body : user.NickName + "님이 대댓글을 달았습니다.",
-                                        isSend : getAllResTwo.isOnline,
-                                })
-
-                                //댓글 작성자한테 fcm
-                                if(fcmFuncRouter.SendFcmEvent( data )){
-                                }else{
-                                        globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+                                        var data = JSON.stringify({
+                                                userID : req.body.userID,
+                                                targetID : reply.UserID,
+                                                title : "대댓글",
+                                                type : "POST_REPLY_REPLY",
+                                                tableIndex : reply.PostID,
+                                                body : user.NickName + "님이 대댓글을 달았습니다.",
+                                                isSend : getAllResTwo.isOnline,
+                                        })
+        
+                                        //댓글 작성자한테 fcm
+                                        if(fcmFuncRouter.SendFcmEvent( data )){
+                                        }else{
+                                                globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+                                        }
                                 }
 
                                 res.status(200).send(result);
