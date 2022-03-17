@@ -25,36 +25,40 @@ module.exports = {
                                         }
                                 ],
                                 where : {
-                                        id : communityID
+                                        id : communityID,
+                                        IsShow : 1
                                 }
                         }).then(async result => {
+                                if(globalRouter.IsEmpty(result)){
+                                        resolv(null);
+                                }else{
+                                        var declares = await models.CommunityPostDeclare.findAll({where : {TargetID : result.id}});
+                                        var declareLength = declares.length;
+                                        var community = result;
         
-                                var declares = await models.CommunityPostDeclare.findAll({where : {TargetID : result.id}});
-                                var declareLength = declares.length;
-                                var community = result;
-
-                                var user = await models.User.findOne(
-                                        {
-                                                attributes: [ 
-                                                        "UserID", "NickName", "ProfileURL"
-                                                ],
-                                                where : {UserID : result.UserID}
+                                        var user = await models.User.findOne(
+                                                {
+                                                        attributes: [ 
+                                                                "UserID", "NickName", "ProfileURL"
+                                                        ],
+                                                        where : {UserID : result.UserID}
+                                                }
+                                        );
+        
+                                        var userID = user.UserID;
+                                        var nickName = user.NickName;
+                                        var profileURL = user.ProfileURL;
+        
+                                        var data = {
+                                                userID,
+                                                nickName,
+                                                profileURL,
+                                                community,
+                                                declareLength
                                         }
-                                );
-
-                                var userID = user.UserID;
-                                var nickName = user.NickName;
-                                var profileURL = user.ProfileURL;
-
-                                var data = {
-                                        userID,
-                                        nickName,
-                                        profileURL,
-                                        community,
-                                        declareLength
+                        
+                                        resolv(data);
                                 }
-                
-                                resolv(data);
                         }).catch(err => {
                                 console.log('CommunityPost GetPostByID Failed' + err);
                                 reject(null);

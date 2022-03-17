@@ -370,54 +370,49 @@ router.post('/Insert/Reply', async(req, res) => {
                 res.status(404).send(null);
                 return;
         }else{
-                if(communityPost.IsShow == 0){
-                        res.status(404).send(null);
-                        return;
-                }else{
-                        await models.CommunityPostReply.create({
-                                UserID : req.body.userID,
-                                PostID : req.body.postID,
-                                Contents : req.body.contents
-                        }).then( async result => {
+                await models.CommunityPostReply.create({
+                        UserID : req.body.userID,
+                        PostID : req.body.postID,
+                        Contents : req.body.contents
+                }).then( async result => {
 
-                                //FCM
-                                await models.CommunityPostSubscriber.findAll({
-                                        where : {
-                                                PostID : req.body.postID
+                        //FCM
+                        await models.CommunityPostSubscriber.findAll({
+                                where : {
+                                        PostID : req.body.postID
+                                }
+                        }).then(async subResult => {
+
+                                var user = await models.User.findOne({where: {userID : req.body.userID}});
+
+                                for(var i = 0 ; i < subResult.length; ++i){
+                                        if(subResult[i].UserID == req.body.userID) continue;
+
+                                         var getAllRes = await getallAsync(String(subResult[i].UserID));
+
+                                         var data = JSON.stringify({
+                                                 userID : req.body.userID,
+                                                 targetID : subResult[i].UserID,
+                                                 title : "새로운 댓글",
+                                                 type : "POST_REPLY",
+                                                 tableIndex : req.body.postID,
+                                                 body : user.NickName + "님이 댓글을 달았습니다.",
+                                                 isSend : getAllRes.isOnline,
+                                         })
+
+                                        if(fcmFuncRouter.SendFcmEvent(data)){
+                                                console.log(URL + '/Insert/Reply fcm is true');
+                                        }else{
+                                                console.log(URL + '/Insert/Reply fcm is false');
                                         }
-                                }).then(async subResult => {
-
-                                        var user = await models.User.findOne({where: {userID : req.body.userID}});
-
-                                        for(var i = 0 ; i < subResult.length; ++i){
-                                                if(subResult[i].UserID == req.body.userID) continue;
-
-                                                 var getAllRes = await getallAsync(String(subResult[i].UserID));
-
-                                                 var data = JSON.stringify({
-                                                         userID : req.body.userID,
-                                                         targetID : subResult[i].UserID,
-                                                         title : "새로운 댓글",
-                                                         type : "POST_REPLY",
-                                                         tableIndex : req.body.postID,
-                                                         body : user.NickName + "님이 댓글을 달았습니다.",
-                                                         isSend : getAllRes.isOnline,
-                                                 })
-
-                                                if(fcmFuncRouter.SendFcmEvent(data)){
-                                                        console.log(URL + '/Insert/Reply fcm is true');
-                                                }else{
-                                                        console.log(URL + '/Insert/Reply fcm is false');
-                                                }
-                                        }
-                                })
-
-                                res.status(200).send(result);
-                        }).catch(err => {
-                                console.log(URL + '/Insert/Reply CommunitySubscriber findAll Failed' + err);
-                                res.status(404).send(null);
+                                }
                         })
-                }
+
+                        res.status(200).send(result);
+                }).catch(err => {
+                        console.log(URL + '/Insert/Reply CommunitySubscriber findAll Failed' + err);
+                        res.status(404).send(null);
+                })
         }
 })
 
@@ -439,55 +434,59 @@ router.post('/Insert/ReplyReply', require('../../controllers/verifyToken'), asyn
                         }
                 })
 
-                if(globalRouter.IsEmpty(replyPost) || replyPost.IsShow == 0){
+                if(globalRouter.IsEmpty(replyPost)){
                         res.status(404).send(null);
                 }else{
+                        var user = await models.User.findOne({where: {UserID: req.body.userID}});
+
+                        //글 작성자와 댓글 작성자가 다르면
+                        if(replyPost.UserID != reply.UserID){
+                                var getAllResOne = await getallAsync(String(replyPost.UserID));
+        
+                                var data = JSON.stringify({
+                                        userID : req.body.userID,
+                                        targetID : replyPost.UserID,
+                                        title : "대댓글",
+                                        type : "POST_REPLY_REPLY",
+                                        tableIndex : reply.PostID,
+                                        body : user.NickName + "님이 대댓글을 달았습니다.",
+                                        isSend : getAllResOne.isOnline,
+                                })
+        
+                                //글 작성자 한테 fcm
+                                if(fcmFuncRouter.SendFcmEvent( data )){
+                                }else{
+                                        globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+                                }
+                        }
+
                         await models.CommunityPostReplyReply.create({
                                 UserID : req.body.userID,
                                 ReplyID : req.body.replyID,
                                 Contents : req.body.contents
                         }).then(async result => {
 
-                                await models.CommunityReplySubscriber.findAll({
-                                        where : {
-                                          ReplyID : req.body.replyID
-                                        }
-                                }).then(async subResult => {
+                                var getAllResTwo = await getallAsync(String(reply.UserID));
 
-                                        var user = await models.User.findOne({where: {UserID: req.body.userID}});
-
-                                        for(var i = 0 ; i < subResult.length; ++i){
-                                                if(subResult[i].UserID == req.body.userID) continue;
-
-                                                var getAllRes = await getallAsync(String(subResult[i].UserID));
-
-                                                var data = JSON.stringify({
-                                                        userID : req.body.userID,
-                                                        targetID : subResult[i].UserID,
-                                                        title : "대댓글",
-                                                        type : "POST_REPLY_REPLY",
-                                                        tableIndex : reply.PostID,
-                                                        body : user.NickName + "님이 대댓글을 달았습니다.",
-                                                        isSend : getAllRes.isOnline,
-                                                })
-
-
-                                                if(fcmFuncRouter.SendFcmEvent( data )){
-                                                        console.log(URL + 'InsertReply fcm is true');
-                                                        return;
-                                                }else{
-                                                        console.log(URL + 'InsertReply fcm is false');
-                                                        return;
-                                                }
-                                        }
-
-                                        res.status(200).send(result);
-                                }).catch(err => {
-                                        console.log(URL + 'Insert/ReplyReply CommunityReplySubscriber findAll Failed' +  err);
-                                        res.status(400).send(null);
+                                var data = JSON.stringify({
+                                        userID : req.body.userID,
+                                        targetID : reply.UserID,
+                                        title : "대댓글",
+                                        type : "POST_REPLY_REPLY",
+                                        tableIndex : reply.PostID,
+                                        body : user.NickName + "님이 대댓글을 달았습니다.",
+                                        isSend : getAllResTwo.isOnline,
                                 })
+
+                                //댓글 작성자한테 fcm
+                                if(fcmFuncRouter.SendFcmEvent( data )){
+                                }else{
+                                        globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+                                }
+
+                                res.status(200).send(result);
                         }).catch(err => {
-                                console.log(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+                                globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
                                 res.status(404).send(null);
                         })
                 }
@@ -558,7 +557,7 @@ router.post('/InsertLike', async(req, res) => {
                                                 title : "게시글",
                                                 type : "POST_LIKE",
                                                 tableIndex : req.body.postID,
-                                                body : user.NickName + " 님이 좋아요 를 눌렀습니다.",
+                                                body : user.NickName + "님이 좋아요 를 눌렀습니다.",
                                                 isSend : obj.isOnline
                                         })  
                                         
