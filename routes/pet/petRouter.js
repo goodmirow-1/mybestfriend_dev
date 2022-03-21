@@ -164,7 +164,7 @@ router.post('/Delete',  require('../../controllers/verifyToken'), async(req, res
                                 id : pet.id
                         }
                 }).catch(err => {
-                        globalRouter.logger.error(URL + '/Delete Pet  destroy Failed ' + err);
+                        globalRouter.logger.error(URL + '/Delete Pet update Failed ' + err);
                         isCheck = false;
                 })
 
