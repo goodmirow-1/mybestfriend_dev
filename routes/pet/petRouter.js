@@ -108,34 +108,67 @@ router.post('/Delete',  require('../../controllers/verifyToken'), async(req, res
         if(globalRouter.IsEmpty(pet)){
                 res.status(200).send(null);
         }else{
-                await models.PetPhoto.findAll({
+                var isCheck = true;
+
+                //디바이스 연결 정보 초기화
+                await models.BowlDeviceTable.update(
+                        {
+                        PetID : null,
+                        },
+                        {
+                        where : { PetID : pet.id}
+                        }
+                ).catch(err => {
+                        globalRouter.logger.error(URL + '/Delete BowlDeviceTable  update Failed ' + err);
+                        isCheck = false;
+                })
+
+                //섭취정보 삭제
+                await models.Intake.destroy({
+                        where : {
+                        PetID : pet.id
+                        }
+                }).catch(err => {
+                        globalRouter.logger.error(URL + '/Delete Intake  destroy Failed ' + err);
+                        isCheck = false;
+                })
+
+                var photoList = await models.PetPhoto.findAll({
+                        where : {
+                        PetID : pet.id
+                        }
+                }).catch(err => {
+                        globalRouter.logger.error(URL + '/Delete PetPhoto  findAll Failed ' + err);
+                        isCheck = false;
+                })
+
+                for(var j = 0 ; j < photoList.length ; ++j){
+                        var photo = photoList[j];
+                        //db데이터 삭제
+                        s3Multer.fileDelete('PetPhotos/' + pet.id , photo.ImageURL);
+                }
+
+                //사진데이터 삭제
+                await models.PetPhoto.destroy({
                         where : {
                                 PetID : pet.id
                         }
-                }).then(result => {
-
-                        var isCheck = true;
-                        for(var i = 0 ; i < result.length; ++i){
-                                s3Multer.fileDelete('PetPhotos/' + pet.id , result[i].ImageURL);
-
-                                result[i].destroy({}).then(petPhotoDestroyResult => {
-                                }).catch(err => {
-                                        console.log(URL + '/Delete PetPhoto Destroy failed' + err);
-                                        isCheck = false;
-                                })
-                        }
-
-                        pet.destroy({}).then(petDestroyResult => {
-                        }).catch(err => {
-                                console.log(URL + '/Delete pet Destroy failed' + err);
-                                isCheck = false;
-                        })
-
-                        res.status(200).send(isCheck);
                 }).catch(err => {
-                        globalRouter.logger.error(URL + '/Delete is faled ' + err);
-                        res.status(400).send(null);
+                        globalRouter.logger.error(URL + '/Delete PetPhoto  destroy Failed ' + err);
+                        isCheck = false;
                 })
+
+                //펫 삭제
+                await models.Pet.destroy({
+                        where : {
+                                id : pet.id
+                        }
+                }).catch(err => {
+                        globalRouter.logger.error(URL + '/Delete Pet  destroy Failed ' + err);
+                        isCheck = false;
+                })
+
+                res.status(200).send(isCheck);
         }
 })
 

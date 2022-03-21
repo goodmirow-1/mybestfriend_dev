@@ -50,7 +50,6 @@ module.exports = (sequelize, DataTypes) => {
     Birthday: {
       type: DataTypes.STRING,
       allowNull: true,
-      defaultValue: "1990-12-10"
     },
     RefreshToken: {
       type: DataTypes.STRING(400),
