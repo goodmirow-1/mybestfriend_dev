@@ -130,19 +130,19 @@ models.sequelize.sync().then( async () => {
     //         console.log('insert pet intake job2 call');
     //         console.log(mNow);
     //     }
+    // // });
+
+    // //밥 먹는거 세팅 - 8,13,18시
+    // var job3 = schedule.scheduleJob('00 00 8,13,18 * *', async function() {
+    //     await feedTestFunc(0);
+    //     await feedTestFunc(0);
     // });
 
-    //밥 먹는거 세팅 - 8,13,18시
-    var job3 = schedule.scheduleJob('00 00 8,13,18 * *', async function() {
-        await feedTestFunc(0);
-        await feedTestFunc(0);
-    });
-
-    //물 마시는거 세팅 - 8,13,18시 1분
-    var job4 = schedule.scheduleJob('00 01 8,13,18 * *', async function() {
-        await feedTestFunc(1);
-        await feedTestFunc(1);
-    });
+    // //물 마시는거 세팅 - 8,13,18시 1분
+    // var job4 = schedule.scheduleJob('00 01 8,13,18 * *', async function() {
+    //     await feedTestFunc(1);
+    //     await feedTestFunc(1);
+    // });
 
     var job6 = await FoodAndWaterStandardDeviation('DONG');
 
@@ -154,8 +154,8 @@ models.sequelize.sync().then( async () => {
 
     jobList.push(job);
     //jobList.push(job2);
-    jobList.push(job3);
-    jobList.push(job4);
+    // jobList.push(job3);
+    // jobList.push(job4);
     // jobList.push(job5);
     jobList.push(job6);
     jobList.push(job7);

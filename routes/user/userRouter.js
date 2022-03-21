@@ -123,7 +123,7 @@ router.post('/Select/WithCommunity', async(req, res) => {
         }
         else{
             communityList.sort(function (a,b){
-                return b['community'].id - b['community'].id;
+                return b['community'].id - a['community'].id;
             });
         }
 

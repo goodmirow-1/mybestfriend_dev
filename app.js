@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const mime = require('mime');
 const schedule = require('node-schedule');
+const cors = require('cors');
 const bodyParserErrorHandler = require('express-body-parser-error-handler')
 
 const userRouter = require('./routes/user/userRouter'),
@@ -49,6 +50,7 @@ app.use(bodyParser.json());
 app.use(bodyParserErrorHandler());
 app.use(express.static(__dirname));
 app.use(helmet());
+app.use(cors());
 
 app.use('/User', userRouter);
 app.use('/Pet', petRouter);

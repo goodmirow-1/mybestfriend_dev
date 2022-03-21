@@ -33,6 +33,7 @@ module.exports = {
                         switch(data.type){
                                 case "POST_LIKE":
                                 case "POST_REPLY":
+                                case "POST_REPLY_RELY":
                                 {
                                         if(result.Community == false) isBanType = true;
                                 }
@@ -64,7 +65,7 @@ module.exports = {
                         //         isBanType = true;
                         // }
 
-                        if(data.type == "POST_LIKE" || data.type == "POST_REPLY"){
+                        if(data.type == "POST_LIKE" || data.type == "POST_REPLY" || data.type == "POST_REPLY_REPLY"){
                                 page = 'COMMUNITY';
                         }
 
