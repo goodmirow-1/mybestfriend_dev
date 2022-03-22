@@ -20,7 +20,6 @@ router.post('/UnSendSelect', async (req, res) => {
 
         for(let i = 0 ; i < result.length; ++i){
             result[i].update(value).then(result2 => {
-                console.log(URL + "UnSendSelect update Success" + result2);
             })
         }
 

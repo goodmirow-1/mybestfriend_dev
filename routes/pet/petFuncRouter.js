@@ -61,7 +61,7 @@ module.exports = {
                                         where : { PetID : pet.id}
                                         }
                                 ).catch(err => {
-                                        globalRouter.logger.error('PetFuncRouter DestroyCauseOfExitMember Failed ' + err);
+                                        globalRouter.logger.error('PetFuncRouter DestroyCauseOfExitMember BowlDeviceTable Failed ' + err);
                                         resolv(true);
                                 })
                         
@@ -71,7 +71,16 @@ module.exports = {
                                         PetID : pet.id
                                         }
                                 }).catch(err => {
-                                        globalRouter.logger.error('PetFuncRouter DestroyCauseOfExitMember Failed ' + err);
+                                        globalRouter.logger.error('PetFuncRouter DestroyCauseOfExitMember Intake Failed ' + err);
+                                        resolv(true);
+                                })
+
+                                await models.IntakeSnack.destroy({
+                                        where : {
+                                        PetID : pet.id
+                                        }
+                                }).catch(err => {
+                                        globalRouter.logger.error('PetFuncRouter DestroyCauseOfExitMember IntakeSnack Failed ' + err);
                                         resolv(true);
                                 })
                         
@@ -80,7 +89,7 @@ module.exports = {
                                         PetID : pet.id
                                         }
                                 }).catch(err => {
-                                        globalRouter.logger.error('PetFuncRouter DestroyCauseOfExitMember Failed ' + err);
+                                        globalRouter.logger.error('PetFuncRouter DestroyCauseOfExitMember PetPhoto Failed ' + err);
                                         resolv(true);
                                 })
                         
@@ -96,7 +105,7 @@ module.exports = {
                                                 PetID : pet.id
                                         }
                                 }).catch(err => {
-                                        globalRouter.logger.error('PetFuncRouter DestroyCauseOfExitMember Failed ' + err);
+                                        globalRouter.logger.error('PetFuncRouter DestroyCauseOfExitMember PetPhoto Failed ' + err);
                                         resolv(true);
                                 })
 
@@ -106,7 +115,7 @@ module.exports = {
                                                 id : pet.id
                                         }
                                 }).catch(err => {
-                                        globalRouter.logger.error('PetFuncRouter DestroyCauseOfExitMember Failed ' + err);
+                                        globalRouter.logger.error('PetFuncRouter DestroyCauseOfExitMember Pet Failed ' + err);
                                         resolv(true);
                                 })
                         }
