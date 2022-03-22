@@ -296,3 +296,12 @@ app.post("/Fixed/FeedID", async( req, res) => {
 		res.status(404).send(null);
 	})
 });
+
+var appVersion = "1.0.0";
+app.post('/Check/AppVersion', async(req, res) => {
+	if(req.body.version == appVersion){
+		res.status(200).send(true);
+	}else{
+		res.status(200).send(false);
+	}
+})
