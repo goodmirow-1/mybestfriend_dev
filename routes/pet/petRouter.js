@@ -279,17 +279,15 @@ router.post('/InsertOrModify', async(req, res) => {     //펫 수정
                                         }else{
                                                 //데이터 삭제
                                                 for(var i = 0 ; i < remove_id_values.length; ++i){
-                                                        console.log('remove_id_values call');
-
                                                         await models.PetPhoto.findOne({
                                                                 where : {
                                                                         id : remove_id_values[i]
                                                                 }
-                                                        }).then(petPhotoResult => {
+                                                        }).then(async petPhotoResult => {
                 
                                                                 s3Multer.fileDelete('PetPhotos/' + fields.get('id') , petPhotoResult.ImageURL);
                 
-                                                                petPhotoResult.destroy({}).then(petPhotoDestroyResult => {
+                                                                await petPhotoResult.destroy({}).then(petPhotoDestroyResult => {
                                                                 }).catch(err => {
                                                                         console.log(URL + '/Modify PetPhoto Destroy failed' + err);
                                                                 })
@@ -300,8 +298,6 @@ router.post('/InsertOrModify', async(req, res) => {     //펫 수정
                 
                                                 //기존 데이터 인덱스 수정
                                                 for(var i = 0 ; i < file_id_values.length; ++i){
-                                                        console.log('file_id_values call');
-
                                                         await models.PetPhoto.update(
                                                                 {
                                                                         Index : i * 1
@@ -319,9 +315,6 @@ router.post('/InsertOrModify', async(req, res) => {     //펫 수정
                 
                                                 //새로운 데이터 생성
                                                 for(var i = file_id_values.length ; i < file_id_values.length + files.length; ++i){
-                                                        
-                                                        console.log('file_id_values.length + files.length call');
-
                                                         var index = i - file_id_values.length;
                                                         var fileName = Date.now() + '.' + files[index].name.split('.').pop();
                 
@@ -338,8 +331,6 @@ router.post('/InsertOrModify', async(req, res) => {     //펫 수정
                                                 }
                                         }
 
-                                        console.log('end call');
-                
                                         res.status(200).send(await petFuncRouter.SelectByID(fields.get('id')));
                                 }).catch(err => {
                                         globalRouter.logger.error(URL + '/InsertOrModify Pet update Failed ' + err);

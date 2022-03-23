@@ -440,7 +440,7 @@ router.post('/Insert/ReplyReply', require('../../controllers/verifyToken'), asyn
                         var user = await models.User.findOne({where: {UserID: req.body.userID}});
 
                         //글 작성자와 댓글 작성자가 다르면
-                        if(replyPost.UserID != reply.UserID){
+                        if(req.body.UserID != replyPost.UserID){
                                 var getAllResOne = await getallAsync(String(replyPost.UserID));
         
                                 var data = JSON.stringify({
