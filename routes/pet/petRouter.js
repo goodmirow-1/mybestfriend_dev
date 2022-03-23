@@ -133,6 +133,15 @@ router.post('/Delete',  require('../../controllers/verifyToken'), async(req, res
                         isCheck = false;
                 })
 
+                await models.IntakeSnack.destroy({
+                        where : {
+                        PetID : pet.id
+                        }
+                }).catch(err => {
+                        globalRouter.logger.error(URL + '/Delete Intake  destroy Failed ' + err);
+                        isCheck = false;
+                })
+
                 var photoList = await models.PetPhoto.findAll({
                         where : {
                         PetID : pet.id
