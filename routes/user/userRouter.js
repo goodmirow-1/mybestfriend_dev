@@ -18,6 +18,8 @@ const { Op } = require('sequelize');
 const verify = require('../../controllers/parameterToken');
 
 const client = globalRouter.client;
+const { promisify } = require("util");
+const getallAsync = promisify(client.hgetall).bind(client);
 
 const ACCESS_TOKEN = 0;
 const REFRESH_TOKEN = 1;
