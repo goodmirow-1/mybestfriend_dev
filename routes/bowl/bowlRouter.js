@@ -1,5 +1,6 @@
 const router = require('express').Router(),
         models = require('../../models'),
+        fcmFuncRouter = require('../fcm/fcmFuncRouter'),
         globalRouter = require('../global');
 
 const { Op } = require('sequelize');
@@ -8,6 +9,8 @@ var moment = require('moment');
 const verify = require('../../controllers/parameterToken');
 
 let URL = '/Bowl';
+const { promisify } = require("util");
+const getallAsync = promisify(client.hgetall).bind(client);
 
 router.post('/Register/Info', async(req, res) => {
         if(globalRouter.IsEmpty(req.body.uuid)){
@@ -114,7 +117,62 @@ router.post('/Insert/Intake', async(req,res) => {
                         Amount : req.body.fa,
                         BowlType : req.body.bt,
                         State : req.body.et,
-                }).then(result => {
+                }).then(async result => {
+
+                        //무게와 양의 차이가 50이하일 때
+                        if(Math.abs(req.body.fa - req.body.bw) < 50){
+                                let fill = await models.Intake.findOne({
+                                        where : {
+                                                        PetID : req.body.pi,
+                                                        BowlType : req.body.bt,
+                                                        State : 1
+                                        },
+                                        order : [
+                                                ['id', 'DESC']
+                                        ],
+                                });
+                        
+                                let eat = await models.Intake.findOne({
+                                                where : {
+                                                                PetID : req.body.pi,
+                                                                BowlType : req.body.bt,
+                                                                State : 3
+                                                },
+                                                order : [
+                                                ['id', 'DESC']
+                                        ],
+                                });
+
+                                var ratio = (eat.Amount - eat.BowlWeight) / (fill.Amount - fill.BowlWeight);
+
+                                //밥 준거 대비 5프로 이하이면
+                                if(ratio <= 0.05){
+                                        var getAllRes = await getallAsync(String(pet.UserID));
+
+                                        if(getAllRes != null){
+                                                var title = req.body.bw == 0 ? "밥" : "물" + " 그릇 알림";
+                                                var bodyhead = pet.Name + "의 그릇이 비었어요. ";
+                                                var bodytail =  (req.body.bw == 0 ? "밥" : "물") + " 그릇을 채워주세요.";
+
+                                                var data = JSON.stringify({
+                                                        userID : 1,
+                                                        targetID : pet.UserID,
+                                                        title : title,
+                                                        type : "PET_BOWL_IS_EMPTY",
+                                                        tableIndex : pet.id,
+                                                        body : bodyhead + bodytail,
+                                                        isSend : getAllRes.isOnline,
+                                                })
+
+                                                if(fcmFuncRouter.SendFcmEvent(data)){
+                                                        console.log(URL + '/InsertOrModify POST_NEW_UPDATE fcm is true');
+                                                }else{
+                                                        console.log(URL + '/InsertOrModify POST_NEW_UPDATE fcm is false');
+                                                }
+                                        }
+                                }
+                        }
+
                         res.status(200).send(true);
                 }).catch(err => {
                         globalRouter.logger.error(URL + '/Insert/Intake Intake create Failed ' + err);
@@ -186,6 +244,24 @@ router.post('/Select/Recent/Intake', async(req, res) => {
         }
 })
 
+router.post('/Select/Recent/EmtpyBowl', async(req, res) => {
+        await models.Intake.findOne({
+                where : {
+                        PetID : req.body.petID,
+                        BowlType : req.body.bowlType,
+                        State : 4
+                },
+                order : [
+			['id', 'DESC']
+		],
+        }).then(result => {
+                res.status(200).send(result);
+        }).catch(err => {
+                globalRouter.logger.error(URL + '/Select/Recent/EmtpyBowl Intake findOne Failed ' + err);
+                res.status(404).send(null);
+        });
+});
+
 router.post('/Insert/Log', async(req, res) => {
         await models.Errlog.create({
                 PetID : req.body.petID,
@@ -193,7 +269,7 @@ router.post('/Insert/Log', async(req, res) => {
         }).then(result => {
                 res.status(200).send(result);
         }).catch(err => {
-                console.log(URL + '/Insert/Log Errlog create Failed ' + err);
+                globalRouter.logger.error(URL + '/Insert/Log Errlog create Failed ' + err);
                 res.status(404).send(null);
         })
 })
@@ -204,7 +280,7 @@ router.get('/Select/Log', async(req, res) => {
         }).then(result => {
                 res.status(200).send(result);
         }).catch(err => {
-                globalRouter.logger.error(URL + '/Insert/Log Errlog findAll Failed ' + err);
+                globalRouter.logger.error(URL + '/Select/Log Errlog findAll Failed ' + err);
                 res.status(404).send(null);
         })
 })

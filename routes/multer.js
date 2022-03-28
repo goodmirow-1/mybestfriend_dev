@@ -6,7 +6,7 @@ aws.config.loadFromPath(__dirname + '/../config/s3.json');
 
 const s3 = new aws.S3();
 
-const myBucket = 'myvfdevbucket';
+const myBucket = 'myvfdevbucket'; //myvef-bowl-production-bucket
 const myAcl = 'public-read';
 
 module.exports = {
@@ -34,7 +34,7 @@ module.exports = {
     },
     formidableFileUpload : function formidableUpload(file, fileName){
         var params = {
-            Bucket : 'myvfdevbucket',
+            Bucket : myBucket,
             Key : fileName,
             ACL : myAcl,
             Body : fs.createReadStream(file.path)

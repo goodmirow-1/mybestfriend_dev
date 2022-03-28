@@ -26,7 +26,7 @@ module.exports = {
         type: Sequelize.INTEGER,
         defaultValue : 0
       },
-      Baterry: {
+      Battery: {
         type: Sequelize.INTEGER,
         defaultValue : 5    //배터리 5단계
       },

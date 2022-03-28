@@ -475,15 +475,14 @@ router.post('/Login', async(req,res) => {
 		            ]
             }
         ]
-    }).then(result => {
+    }).then(async result => {
         if(globalRouter.IsEmpty(result)){
             res.status(200).send(null);
         }else{
 
-            client.hgetall(String(result.UserID), function(err, obj) {
-                if(err) throw err;
-                if(obj == null) return;
+            var getAllRes = await getallAsync(String(result.UserID));
 
+            if(getAllRes != null){
                 const resPassword = result.Password;
     
                 if (resPassword == hashedPwd) { //들어온 비밀번호의 hased 버전이 테이블에 있는 비밀번호 값과 같으면 그다음 flow 로 넘어갈 수 있음
@@ -523,7 +522,9 @@ router.post('/Login', async(req,res) => {
                 }else{
                     res.status(400).send(null);
                 }
-            });
+            }else{
+                res.status(400).send(null);
+            }
         }
     })
 })
@@ -567,15 +568,14 @@ router.post('/Login/Social', async(req, res) => {
                         ]
                 }
             ]
-        }).then(result => {
+        }).then(async result => {
             if(globalRouter.IsEmpty(result)){ //로그인 정보가 없으면
                 //필요에 따라 처리 필요함 (구글, 카톡, 애플)
                 res.status(200).send(null);
             }else{
-                client.hgetall(String(result.UserID), function(err, obj) {
-                    if(err) throw err;
-                    if(obj == null) return;
+                var getAllRes = await getallAsync(String(result.UserID));
 
+                if(getAllRes != null){
                     const payload = {
                         Email : req.body.email
                     };
@@ -608,8 +608,9 @@ router.post('/Login/Social', async(req, res) => {
                         globalRouter.logger.error(err + "real error");
                         res.status(400).send(null);
                     })
-                });
-
+                }else{
+                    res.status(400).send(null);
+                }
             }
         })
     }

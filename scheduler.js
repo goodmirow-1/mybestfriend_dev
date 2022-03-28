@@ -954,7 +954,3 @@ app.get('/Schedule/Do/CheckIntakes', async function(req, res) {
     res.status(200).send(true);
 });
 
-
-require('moment-timezone');
-moment.tz.setDefault("Asia/Seoul");
-

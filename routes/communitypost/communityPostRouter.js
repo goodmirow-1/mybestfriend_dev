@@ -1,10 +1,12 @@
 const router = require('express').Router(),
         models = require('../../models'),
         formidable = require('formidable'),
+        moment = require('moment'),
         fcmFuncRouter = require('../fcm/fcmFuncRouter'),
         globalRouter = require('../global');
 
 const s3Multer = require('../multer');
+
 const communityPostFuncRouter = require('./communityPostFuncRouter');
 const verify = require('../../controllers/parameterToken');
 const client = globalRouter.client;
@@ -269,7 +271,44 @@ router.post('/InsertOrModify', async(req, res) => {
                                         }).catch(err => {
                                                 globalRouter.logger.error(URL + '/InsertOrModify CommunityPostSubscriber create Failed ' + err);
                                         })
+
+                                        //접속중인 사용자들에게 새 글 작성 알림
+                                        await models.User.findAll({
+                                                where : {
+                                                        //[Op.not] : { UserID : req.body.userID},
+                                                        updatedAt : { 
+                                                                //1시간 이내
+                                                                [Op.gte] : moment().subtract(1, 'H').toDate()
+                                                        },
+                                                }
+                                        }).then(async userResult => {
+
+                                                for(var i = 0 ; i < userResult.length ; ++i){
+                                                        var getAllRes = await getallAsync(String(userResult[i].UserID));
+
+                                                        if(getAllRes == null) continue;
+
+                                                        if(userResult[i].UserID == 136 || userResult[i].UserID == 1){
+                                                                var data = JSON.stringify({
+                                                                        userID : fields.get('userID'),
+                                                                        targetID : userResult[i].UserID,
+                                                                        title : "새로운 댓글",
+                                                                        type : "POST_NEW_UPDATE",
+                                                                        tableIndex : result.id,
+                                                                        body : "새 글이 작성되었습니다.",
+                                                                        isSend : getAllRes.isOnline,
+                                                                })
         
+                                                                if(fcmFuncRouter.SendFcmEvent(data)){
+                                                                        console.log(URL + '/InsertOrModify POST_NEW_UPDATE fcm is true');
+                                                                }else{
+                                                                        console.log(URL + '/InsertOrModify POST_NEW_UPDATE fcm is false');
+                                                                }
+                                                        }
+                                                        
+                                                }
+                                        })
+
                                         res.status(200).send(await communityPostFuncRouter.SelectByID(result.id));
                                 }).catch(err => {
                                         globalRouter.logger.error(URL + '/InsertOrModify CommunityPost create Failed ' + err);
@@ -390,6 +429,8 @@ router.post('/Insert/Reply', async(req, res) => {
 
                                          var getAllRes = await getallAsync(String(subResult[i].UserID));
 
+                                         if(getAllRes == null) continue;
+
                                          var data = JSON.stringify({
                                                  userID : req.body.userID,
                                                  targetID : subResult[i].UserID,
@@ -442,21 +483,23 @@ router.post('/Insert/ReplyReply', require('../../controllers/verifyToken'), asyn
                         //글 작성자와 댓글 작성자가 다르면
                         if(req.body.userID != replyPost.UserID){
                                 var getAllResOne = await getallAsync(String(replyPost.UserID));
-        
-                                var data = JSON.stringify({
-                                        userID : req.body.userID,
-                                        targetID : replyPost.UserID,
-                                        title : "대댓글",
-                                        type : "POST_REPLY_REPLY",
-                                        tableIndex : reply.PostID,
-                                        body : user.NickName + "님이 대댓글을 달았습니다.",
-                                        isSend : getAllResOne.isOnline,
-                                })
-        
-                                //글 작성자 한테 fcm
-                                if(fcmFuncRouter.SendFcmEvent( data )){
-                                }else{
-                                        globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+
+                                if(getAllResOne != null) {
+                                        var data = JSON.stringify({
+                                                userID : req.body.userID,
+                                                targetID : replyPost.UserID,
+                                                title : "대댓글",
+                                                type : "POST_REPLY_REPLY",
+                                                tableIndex : reply.PostID,
+                                                body : user.NickName + "님이 대댓글을 달았습니다.",
+                                                isSend : getAllResOne.isOnline,
+                                        })
+                
+                                        //글 작성자 한테 fcm
+                                        if(fcmFuncRouter.SendFcmEvent( data )){
+                                        }else{
+                                                globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+                                        }
                                 }
                         }
 
@@ -468,20 +511,23 @@ router.post('/Insert/ReplyReply', require('../../controllers/verifyToken'), asyn
                                 if(req.body.userID != reply.UserID){
                                         var getAllResTwo = await getallAsync(String(reply.UserID));
 
-                                        var data = JSON.stringify({
-                                                userID : req.body.userID,
-                                                targetID : reply.UserID,
-                                                title : "대댓글",
-                                                type : "POST_REPLY_REPLY",
-                                                tableIndex : reply.PostID,
-                                                body : user.NickName + "님이 대댓글을 달았습니다.",
-                                                isSend : getAllResTwo.isOnline,
-                                        })
-        
-                                        //댓글 작성자한테 fcm
-                                        if(fcmFuncRouter.SendFcmEvent( data )){
-                                        }else{
-                                                globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+                                        if(getAllResTwo == null) {
+                                                var data = JSON.stringify({
+                                                        userID : req.body.userID,
+                                                        targetID : reply.UserID,
+                                                        title : "대댓글",
+                                                        type : "POST_REPLY_REPLY",
+                                                        tableIndex : reply.PostID,
+                                                        body : user.NickName + "님이 대댓글을 달았습니다.",
+                                                        isSend : getAllResTwo.isOnline,
+                                                })
+                
+                                                //댓글 작성자한테 fcm
+                                                if(fcmFuncRouter.SendFcmEvent( data )){
+                                                }else{
+                                                        globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+                                                }
+                                                
                                         }
                                 }
 
@@ -545,11 +591,13 @@ router.post('/InsertLike', async(req, res) => {
                                         res.status(200).send(result);
                                         return;
                                 }
-                        
-                                client.hgetall(String(post.UserID), async function(err, obj) {
-                                        if(err) throw err;
-                                        if(obj == null) return;
-                                
+
+                                var getAllRes = await getallAsync(String(post.UserID));
+
+                                if(getAllRes == null) {
+                                        res.status(200).send(result);
+                                        return;
+                                }else {
                                         var user = await models.User.findOne({where: {UserID: req.body.userID}});
                                         
                                         var data = JSON.stringify({
@@ -559,9 +607,9 @@ router.post('/InsertLike', async(req, res) => {
                                                 type : "POST_LIKE",
                                                 tableIndex : req.body.postID,
                                                 body : user.NickName + "님이 좋아요 를 눌렀습니다.",
-                                                isSend : obj.isOnline
+                                                isSend : getAllRes.isOnline
                                         })  
-                                        
+
                                         if(fcmFuncRouter.SendFcmEvent( data )){
                                                 res.status(200).send(result);
                                                 return;
@@ -569,7 +617,7 @@ router.post('/InsertLike', async(req, res) => {
                                                 res.status(400).send(result);
                                                 return;
                                         }
-                                });
+                                }
                         }else{
                                 //좋아요가 감소 되었을 경우
                                 if(post.Type == 1){

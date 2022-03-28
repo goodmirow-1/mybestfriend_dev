@@ -69,8 +69,21 @@ const server = app.listen(app.get('port'), () => {
 });
 
 // sequelize 연동
+const client = globalRouter.client;
 models.sequelize.sync().then( () => {
 	console.log("Write DB Connect Success");
+
+
+	
+	models.User.findAll({
+	}).then(result => {
+		for(var i = 0 ; i < result.length; ++i){
+			client.hmset(String(result[i].UserID), {
+				"isOnline" : 0,
+			});
+		}	
+	})
+
 }).catch( err => {
     console.log("Write DB Connect Faield");
     console.log(err);
@@ -226,7 +239,7 @@ app.post('/Check/Alive' , async function(req, res) {
 	res.json({"msg" : "OK"});
 });
 
-const client = globalRouter.client;
+
 app.post('/OnResume', async(req, res) => {
 	client.hmset(String(req.body.userID), {
 		"isOnline" : 1,
@@ -305,3 +318,38 @@ app.post('/Check/AppVersion', async(req, res) => {
 		res.status(200).send(false);
 	}
 })
+
+app.post('/Test', async(req, res) => {
+	let fill = await models.Intake.findOne({
+		where : {
+				PetID : req.body.petID,
+				BowlType : req.body.bowlType,
+				State : 1
+		},
+		order : [
+		['id', 'DESC']
+	],
+	});
+
+	let eat = await models.Intake.findOne({
+			where : {
+					PetID : req.body.petID,
+					BowlType : req.body.bowlType,
+					State : 3
+			},
+			order : [
+		['id', 'DESC']
+	],
+	});
+
+	//밥을 주기만 했으면
+	if(globalRouter.IsEmpty(eat)){
+			res.status(200).send(true);
+	}else{
+			var resData = {
+				"res" : (eat.Amount - eat.BowlWeight) / (fill.Amount - fill.BowlWeight)
+			}
+
+			res.status(200).send(resData);
+	}
+});
