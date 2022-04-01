@@ -10,7 +10,6 @@ module.exports = {
                 UserID: data.userID,
                 TargetID : data.targetID,
                 Type : data.type,
-                UUID : data.uuid,
                 IsSend : data.isSend,
                 TableIndex : data.tableIndex,
                 SubIndex : data.subIndex,

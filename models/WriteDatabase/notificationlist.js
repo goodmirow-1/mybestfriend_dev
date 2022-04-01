@@ -21,7 +21,6 @@ module.exports = (sequelize, DataTypes) => {
     UserID: DataTypes.INTEGER,
     TargetID: DataTypes.INTEGER,
     Type: DataTypes.STRING,
-    UUID: DataTypes.STRING,
     TableIndex: DataTypes.INTEGER,
     SubIndex: DataTypes.STRING,
     IsSend: DataTypes.BOOLEAN

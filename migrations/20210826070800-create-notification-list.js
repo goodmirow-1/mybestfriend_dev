@@ -21,9 +21,6 @@ module.exports = {
       Type: {
         type: Sequelize.STRING
       },
-      UUID: {
-        type: Sequelize.STRING
-      },
       TableIndex: {
         type: Sequelize.INTEGER,
         defaultValue : 0
