@@ -28,6 +28,9 @@ module.exports = {
         type: Sequelize.INTEGER,
         defaultValue : 0
       },
+      SubIndex: {
+        type: Sequelize.STRING,
+      },
       IsSend: {
         type: Sequelize.BOOLEAN
       },

@@ -845,6 +845,7 @@ async function checkIntakes(){
                     title : "기기 알림",
                     type : "NEED_DEVICE_CHECK",
                     tableIndex : intakeInfo.petID,
+                    subIndex : 0,
                     body : bodyMessage,
                     isSend : getAllRes.isOnline
                 })
@@ -937,12 +938,13 @@ app.get('/Schedule/Do/CheckIntakes', async function(req, res) {
             title : "기기 알림",
             type : "NEED_DEVICE_CHECK",
             tableIndex : intakeInfo.petID,
+            subIndex : 0,
             body : bodyMessage,
             isSend : getAllRes.isOnline
         })
     
         //test1@test.test , guks iphon mini
-        if(intakeInfo.userID == 20 || intakeInfo.userID == 136){
+        if(intakeInfo.userID == 73 || intakeInfo.userID == 136){
             if(await fcmFuncRouter.SendFcmEvent( data )){
                 console.log('Schedule/Do/CheckIntakes fcm is true');
             }else{

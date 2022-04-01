@@ -12,7 +12,8 @@ module.exports = {
                 Type : data.type,
                 UUID : data.uuid,
                 IsSend : data.isSend,
-                TableIndex : data.tableIndex
+                TableIndex : data.tableIndex,
+                SubIndex : data.subIndex,
             }).then( result => {
                 console.log('InsertNotification create Success ' + result);
                 resolv(result);

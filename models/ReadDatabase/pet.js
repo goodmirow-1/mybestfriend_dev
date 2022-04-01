@@ -24,6 +24,9 @@ module.exports = (sequelize, DataTypes) => {
       this.hasMany(models.Intake, {
         foreignKey: 'PetID'
       })
+      this.hasMany(models.IntakeSnack, {
+        foreignKey: 'PetID'
+      })
     }
   };
   Pet.init({
@@ -40,6 +43,8 @@ module.exports = (sequelize, DataTypes) => {
     Disease: DataTypes.STRING,
     Allergy: DataTypes.STRING,
     FoodID: DataTypes.INTEGER,
+    FoodCalorie: DataTypes.INTEGER,
+    FoodWater: DataTypes.DOUBLE,
     FoodRecommendedIntake: DataTypes.DOUBLE,
     WaterRecommendedIntake: DataTypes.DOUBLE,
     WeightRecommended: DataTypes.DOUBLE

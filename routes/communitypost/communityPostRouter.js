@@ -295,6 +295,7 @@ router.post('/InsertOrModify', async(req, res) => {
                                                                         title : "새로운 댓글",
                                                                         type : "POST_NEW_UPDATE",
                                                                         tableIndex : result.id,
+                                                                        subIndex : 0,
                                                                         body : "새 글이 작성되었습니다.",
                                                                         isSend : getAllRes.isOnline,
                                                                 })
@@ -437,6 +438,7 @@ router.post('/Insert/Reply', async(req, res) => {
                                                  title : "새로운 댓글",
                                                  type : "POST_REPLY",
                                                  tableIndex : req.body.postID,
+                                                 subIndex : 0,
                                                  body : user.NickName + "님이 댓글을 달았습니다.",
                                                  isSend : getAllRes.isOnline,
                                          })
@@ -518,6 +520,7 @@ router.post('/Insert/ReplyReply', require('../../controllers/verifyToken'), asyn
                                                         title : "대댓글",
                                                         type : "POST_REPLY_REPLY",
                                                         tableIndex : reply.PostID,
+                                                        subIndex : 0,
                                                         body : user.NickName + "님이 대댓글을 달았습니다.",
                                                         isSend : getAllResTwo.isOnline,
                                                 })

@@ -21,6 +21,7 @@ module.exports = (sequelize, DataTypes) => {
     PerProtein: DataTypes.DOUBLE,
     PerFat: DataTypes.DOUBLE,
     Carbohydrate: DataTypes.DOUBLE,
+    Water: DataTypes.DOUBLE,
     Calorie: DataTypes.INTEGER
   }, {
     sequelize,

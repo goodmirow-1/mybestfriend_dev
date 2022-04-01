@@ -38,44 +38,27 @@ module.exports = {
                                         if(result.Community == false) isBanType = true;
                                 }
                                 break;
+                                case "PET_BOWL_IS_EMPTY":
+                                case "PET_EAT_DONE":
+                                {
+                                        if(result.Eating == false) isBanType = true;
+                                }
+                                break;
                         }
-
-                        // //식사 알림 차단
-                        // if(result.Eating == false){
-                        //         isBanType = true;
-                        // }
-
-                        // //분석 알림 차단
-                        // if(result.Analysis == false){
-                        //         isBanType = true;
-                        // }
-
-                        // //한마디 알림 차단
-                        // if(result.Advice == false){
-                        //         isBanType = true;
-                        // }
-
-                        // //커뮤니티 알림 차단
-                        // if(result.Community == false){
-                        //         isBanType = true;
-                        // }
-
-                        // //마케팅 알림 차단
-                        // if(result.Marketing == false){
-                        //         isBanType = true;
-                        // }
 
                         if(data.type == "POST_LIKE" || data.type == "POST_REPLY" || data.type == "POST_REPLY_REPLY"){
                                 page = 'COMMUNITY';
+                        }else if(data.type == "PET_BOWL_IS_EMPTY" || data.type == "PET_EAT_DONE"){
+                                page = 'BOWL';
                         }
 
                         var message = data.title + " : " + data.body;
 
                         var tableStr = globalRouter.IsEmpty(fcmData.TableIndex) ? 0 : fcmData.TableIndex;
-                        var uuidStr = globalRouter.IsEmpty(fcmData.UUID) ? '' : fcmData.UUID;
+                        var subStr = globalRouter.IsEmpty(fcmData.SubIndex) ? '' : fcmData.SubIndex;
                         var date = moment().format('yyyy-MM-DD HH:mm:ss');
                         if(globalRouter.IsEmpty(fcmData) == false)
-                                res = fcmData.id + "|" + fcmData.UserID + '|' + fcmData.TargetID + '|' + fcmData.Type + '|' + uuidStr + '|' + tableStr + '|' + date;
+                                res = fcmData.id + "|" + fcmData.UserID + '|' + fcmData.TargetID + '|' + fcmData.Type + '|' + tableStr + '|' + subStr + '|' + date;
          
                         let sendMsg;
                         var badgeCount = Number(result.BadgeCount + 1);
@@ -113,8 +96,6 @@ module.exports = {
                                         token : result.Token,
                                 }
                         }
-
-                        console.log(sendMsg);
 
                         admin.messaging().send(sendMsg)
                          .then( fcmResult => {

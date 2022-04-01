@@ -23,6 +23,7 @@ module.exports = (sequelize, DataTypes) => {
     Type: DataTypes.STRING,
     UUID: DataTypes.STRING,
     TableIndex: DataTypes.INTEGER,
+    SubIndex: DataTypes.STRING,
     IsSend: DataTypes.BOOLEAN
   }, {
     sequelize,

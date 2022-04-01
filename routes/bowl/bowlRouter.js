@@ -1,5 +1,6 @@
 const router = require('express').Router(),
         models = require('../../models'),
+        models_pro = require('../../models/index_pro'),
         fcmFuncRouter = require('../fcm/fcmFuncRouter'),
         globalRouter = require('../global');
 
@@ -13,11 +14,14 @@ const { promisify } = require("util");
 const getallAsync = promisify(client.hgetall).bind(client);
 
 router.post('/Register/Info', async(req, res) => {
+        console.log(URL + '/Register/Info func call');
+
         if(globalRouter.IsEmpty(req.body.uuid)){
+                console.log(req.body);
                 console.log(URL + '/Register/BowlInfo UUID is Empty');
                 res.status(404).send(null);
         }else{
-                await models.BowlDeviceTable.findOrCreate({
+                await models_pro.BowlDeviceTable.findOrCreate({
                         where : {
                                 UUID : req.body.uuid
                         },
@@ -48,7 +52,7 @@ router.post('/Register/Info', async(req, res) => {
 
 router.post('/Disconnect/Pet', require('../../controllers/verifyToken'), async(req, res) => {
 
-        var bowl = await models.BowlDeviceTable.findOne({
+        var bowl = await models_pro.BowlDeviceTable.findOne({
                 where : {id : req.body.id}
         })
 
@@ -71,7 +75,7 @@ router.post('/Disconnect/Pet', require('../../controllers/verifyToken'), async(r
 });
 
 router.post('/Update/BowlWeight', async(req,res) => {
-        await models.BowlDeviceTable.update(
+        await models_pro.BowlDeviceTable.update(
                 {
                         BowlWeight : req.body.bw,
                 },
@@ -119,8 +123,62 @@ router.post('/Insert/Intake', async(req,res) => {
                         State : req.body.et,
                 }).then(async result => {
 
-                        //무게와 양의 차이가 50이하일 때
-                        if(Math.abs(req.body.fa - req.body.bw) < 50){
+                        //밥을 먹었을 때
+                        if(req.body.et == 3){
+                                let prev = await models.Intake.findOne({
+                                        where : {
+                                                        PetID : req.body.pi,
+                                                        BowlType : req.body.bt,
+                                                        State : 2
+                                        },
+                                        order : [
+                                                ['id', 'DESC']
+                                        ],
+                                });
+                        
+                                let eat = await models.Intake.findOne({
+                                                where : {
+                                                                PetID : req.body.pi,
+                                                                BowlType : req.body.bt,
+                                                                State : 3
+                                                },
+                                                order : [
+                                                ['id', 'DESC']
+                                        ],
+                                });
+
+                                //먹은양이 먹기시작 전보다 클 때만
+                                var amount = prev.Amount - eat.Amount;
+                                if(amount > 0){
+                                        var getAllRes = await getallAsync(String(pet.UserID));
+
+                                        if(getAllRes != null){
+                                                var bodyhead = " '" + pet.Name + "' 이/가 ";
+                                                var bodymiddle = req.body.bt == 0 ? "밥을 " : "물을 ";
+                                                var bodytail = req.body.bt == 0 ? "g 먹었어요!"  : "ml 마셨어요!";
+
+                                                var data = JSON.stringify({
+                                                        userID : 1,
+                                                        targetID : pet.UserID,
+                                                        title : "기기 알림 ",
+                                                        type : "PET_EAT_DONE",
+                                                        tableIndex : pet.id,
+                                                        subIndex : req.body.bt + '/' + amount,
+                                                        body : bodyhead + bodymiddle + amount + bodytail,
+                                                        isSend : getAllRes.isOnline,
+                                                })
+
+                                                if(fcmFuncRouter.SendFcmEvent(data)){
+                                                        console.log(URL + '/InsertOrModify POST_NEW_UPDATE fcm is true');
+                                                }else{
+                                                        console.log(URL + '/InsertOrModify POST_NEW_UPDATE fcm is false');
+                                                }
+                                        }
+                                }
+                        }
+
+                        //무게와 양의 차이가 50이하일 때 state4가 아니고
+                        if(req.body.et != 4 &&  Math.abs(req.body.fa - req.body.bw) < 50){
                                 let fill = await models.Intake.findOne({
                                         where : {
                                                         PetID : req.body.pi,
@@ -150,16 +208,16 @@ router.post('/Insert/Intake', async(req,res) => {
                                         var getAllRes = await getallAsync(String(pet.UserID));
 
                                         if(getAllRes != null){
-                                                var title = req.body.bw == 0 ? "밥" : "물" + " 그릇 알림";
-                                                var bodyhead = pet.Name + "의 그릇이 비었어요. ";
-                                                var bodytail =  (req.body.bw == 0 ? "밥" : "물") + " 그릇을 채워주세요.";
+                                                var bodyhead = " '" + pet.Name + "' 의 ";
+                                                var bodytail =  (req.body.bt == 0 ? "밥" : "물") + " 그릇이 비었어요!";
 
                                                 var data = JSON.stringify({
                                                         userID : 1,
                                                         targetID : pet.UserID,
-                                                        title : title,
+                                                        title : "기기알림 ",
                                                         type : "PET_BOWL_IS_EMPTY",
                                                         tableIndex : pet.id,
+                                                        subIndex : req.body.bt,
                                                         body : bodyhead + bodytail,
                                                         isSend : getAllRes.isOnline,
                                                 })

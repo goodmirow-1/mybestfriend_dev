@@ -353,3 +353,306 @@ app.post('/Test', async(req, res) => {
 			res.status(200).send(resData);
 	}
 });
+
+const models_pro = require('./models/index_pro');
+models_pro.sequelize.sync().then( () => {
+	console.log("Write pro DB Connect Success");
+});
+
+var request = require('request');
+var download = function(uri, filename, callback){
+	request.head(uri, function(err, res, body){
+	  console.log('content-type:', res.headers['content-type']);
+	  console.log('content-length:', res.headers['content-length']);
+  
+	  request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+	});
+  };
+
+var s3Url = 'http://myvfdevbucket.s3.ap-northeast-2.amazonaws.com';
+
+const s3MulterPro = require('./routes/multer_pro');
+const { Op } = require('sequelize');
+
+app.post('/Data/Transfer/To/ProvideDB', async(req, res) => {
+	await models.User.findOne({
+		where : {
+			UserID : req.body.userID
+		},
+		include : [
+			{
+					model : models.Pet,
+					required : true,
+					limit: 99,
+					order : [
+						['Index', 'ASC']
+					],
+					include : [
+						{
+								model : models.PetPhoto,
+								required : true,
+								limit : 5,
+								order : [
+												['Index', 'ASC']
+								]
+						},
+						{
+								model : models.BowlDeviceTable,
+								required : true,
+								limit : 2,  //밥그릇, 물그릇
+								order : [
+												['id', 'DESC']
+								],
+								where : {
+									[Op.not] : { BowlWeight : 0},
+								}
+						},
+					]
+			}
+		]
+	}).then(async result => {
+		await models_pro.User.create({
+			Email : result.Email,
+			Password : result.Password,
+			LoginType : result.LoginType,
+			NickName : result.NickName,
+			Location : result.Location,
+			Information : result.Information,
+			RealName : result.RealName,
+			PhoneNumber :result.PhoneNumber,
+			ProfileURL : result.ProfileURL,
+			Sex : result.Sex,
+			Birthday : result.Birthday,
+			MarketingAgree : result.MarketingAgree,
+			MarketingAgreeTime : result.MarketingAgreeTime,
+			LoginState : result.LoginState,
+			RefreshToken : result.RefreshToken,
+		}).then(async result2 => {
+			console.log('transfer user data success');
+
+			globalRouter.makeFolder('./AllPhotos/PersonalPhotos/' + result2.UserID);
+
+			//이미지 
+			download('http://myvfdevbucket.s3.ap-northeast-2.amazonaws.com' + '/ProfilePhotos/' + result.UserID + '/' + result.ProfileURL, './AllPhotos/PersonalPhotos/' + result2.UserID + '/' + result2.ProfileURL, function(){
+				console.log('profile image done');
+
+				s3MulterPro.formidablePathUpload('./AllPhotos/PersonalPhotos/' + result2.UserID + '/' + result2.ProfileURL, 'ProfilePhotos/' + result2.UserID + '/' + result2.ProfileURL);
+			});
+
+			for(var i = 0 ; i < result['Pets'].length ; ++i){
+				await models_pro.Pet.create({
+					UserID : result2.UserID,
+					Index : result['Pets'][i].Index,
+					Type : result['Pets'][i].Type,
+					Name : result['Pets'][i].Name,
+					Birthday : result['Pets'][i].Birthday,
+					Kind : result['Pets'][i].Kind,
+					Weight : result['Pets'][i].Weight,
+					Sex : result['Pets'][i].Sex,
+					PregnantState : result['Pets'][i].PregnantState,
+					ObesityState : result['Pets'][i].ObesityState,
+					Disease : result['Pets'][i].Disease,
+					Allergy : result['Pets'][i].Allergy,
+					FoodID : result['Pets'][i].FoodID,
+					FoodCalorie : result['Pets'][i].FoodCalorie,
+					FoodWater : result['Pets'][i].FoodWater,
+					FoodRecommendedIntake : result['Pets'][i].FoodRecommendedIntake,
+					WaterRecommendedIntake : result['Pets'][i].WaterRecommendedIntake,
+					WeightRecommended : result['Pets'][i].WeightRecommended,
+				}).then(async resultPet => {
+					for(var j = 0 ; j < result['Pets'][i]['PetPhotos'].length ; ++j){
+						await models_pro.PetPhoto.create({
+							PetID : resultPet.id,
+							Index : j * 1,
+							ImageURL : result['Pets'][i]['PetPhotos'][j].ImageURL
+						}).then(resultPetPhoto => {
+							globalRouter.makeFolder('./AllPhotos/PetPhotos/' + resultPet.id);
+
+							//이미지 
+							download('http://myvfdevbucket.s3.ap-northeast-2.amazonaws.com' + '/PetPhotos/' + result['Pets'][i].id + '/' + resultPetPhoto.ImageURL, './AllPhotos/PetPhotos/' + resultPet.id + '/' + resultPetPhoto.ImageURL, function(){
+								console.log('petphoto image done');
+
+
+								s3MulterPro.formidablePathUpload('./AllPhotos/PetPhotos/' + resultPet.id + '/' + resultPetPhoto.ImageURL, 'PetPhotos/' + resultPet.id + '/' + resultPetPhoto.ImageURL);
+							});
+						})
+					}
+
+					//그릇
+					for(var j = 0 ; j < result['Pets'][i]['BowlDeviceTables'].length; ++j){
+						await models_pro.BowlDeviceTable.create({
+							PetID : resultPet.id,
+							UUID : result['Pets'][i]['BowlDeviceTables'][j].UUID,
+							BowlWeight : result['Pets'][i]['BowlDeviceTables'][j].BowlWeight,
+							Type : result['Pets'][i]['BowlDeviceTables'][j].Type,
+							Battery : result['Pets'][i]['BowlDeviceTables'][j].Battery,
+						})
+					}
+
+					//사료
+					await models.Intake.findAll({
+						where : {
+							PetID : result['Pets'][i].id
+						}
+					}).then(async resultIntake => {
+						for(var j = 0; j < resultIntake.length ; ++j){
+							await models_pro.Intake.create({
+								PetID : resultPet.id,
+								FoodID : resultIntake[j]['FoodID'],
+								BowlWeight : resultIntake[j]['BowlWeight'],
+								Amount : resultIntake[j]['Amount'],
+								BowlType : resultIntake[j]['BowlType'],
+								State : resultIntake[j]['State']
+							})
+						}
+					})
+
+					//간식
+					await models.IntakeSnack.findAll({
+						where : {
+							PetID : result['Pets'][i].id
+						}
+					}).then(async resultIntakeSnack=> {
+						for(var j = 0; j < resultIntakeSnack.length ; ++j){
+							await models_pro.IntakeSnack.create({
+								PetID : resultPet.id,
+								SnackID : resultIntakeSnack[j]['SnackID'],
+								Amount : resultIntakeSnack[j]['Amount'],
+								Water : resultIntakeSnack[j]['Water'],
+								Calorie : resultIntakeSnack[j]['Calorie'],
+								Time : resultIntakeSnack[j]['Time'],
+							})
+						}
+					})
+				})
+			}
+
+
+			res.status(200).send(true);
+		}).catch(err => {
+			console.log('transfer user data failed' + err);
+			res.status(404).send(false);
+		})
+	}).catch(err => {
+		console.log('transfer user data failed' + err);
+		res.status(404).send(false);
+	})
+});
+
+app.post('/Image/Transfer/User', async(req, res) => {
+
+	var user = await models.User.findOne({
+		where : {
+			UserID : req.body.userID
+		},
+	});
+
+	globalRouter.makeFolder('./AllPhotos/ProfilePhotos/' + user.UserID);
+
+	//이미지 
+	download('http://myvfdevbucket.s3.ap-northeast-2.amazonaws.com' + '/ProfilePhotos/' + user.UserID + '/' + user.ProfileURL, './AllPhotos/ProfilePhotos/' + user.UserID + '/' + user.ProfileURL, function(){
+		console.log('profile image done');
+
+		s3MulterPro.formidablePathUpload('./AllPhotos/ProfilePhotos/' + user.UserID + '/' + user.ProfileURL, 'ProfilePhotos/' + user.UserID + '/' + user.ProfileURL);
+	});
+
+	res.status(200).send(true);
+});
+
+app.post('/Image/Transfer/Pet', async(req, res) => {
+
+	var pet = await models.Pet.findOne({
+		where : {
+			id : req.body.petID
+		},
+		include : [
+			{
+					model : models.PetPhoto,
+					required : true,
+					limit : 5,
+					order : [
+									['Index', 'ASC']
+					]
+			},
+		]
+	});
+
+	globalRouter.makeFolder('./AllPhotos/PetPhotos/' + pet.id);
+
+	console.log(pet.PetPhotos[0]);
+
+	for(var i = 0 ; i < pet.PetPhotos.length ; ++i){
+
+		if(req.body.down == 0){
+			//이미지 
+			download('http://myvfdevbucket.s3.ap-northeast-2.amazonaws.com' + '/PetPhotos/' + pet.id + '/' + pet.PetPhotos[i].ImageURL, './AllPhotos/PetPhotos/' + pet.id + '/' + pet.PetPhotos[i].ImageURL, function(){
+				console.log('pet image done');
+			});
+		}else{
+			s3MulterPro.formidablePathUpload('./AllPhotos/PetPhotos/' + pet.id + '/' + pet.PetPhotos[i].ImageURL, 'PetPhotos/' + pet.id + '/' + pet.PetPhotos[i].ImageURL);
+		}
+	}
+
+	res.status(200).send(true);
+});
+
+app.post('/Image/Transfer/Community', async(req, res) => {
+
+	await models.CommunityPost.findAll({
+		where : {
+			IsShow : 1,
+			[Op.not] : { ImageURL1 : null},
+		}
+	}).then(result => {
+
+		for(var i = 0 ; i < result.length; ++i){
+			globalRouter.makeFolder('./AllPhotos/CommunityPhotos/' + result[i].id);
+
+			if(req.body.download == 0){
+				download('http://myvfdevbucket.s3.ap-northeast-2.amazonaws.com' + '/CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL1, './AllPhotos/CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL1, function(){
+					console.log('CommunityPhotos image done');
+				});
+			}else{
+				s3MulterPro.formidablePathUpload('./AllPhotos/CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL1, 'CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL1);
+			}
+		}
+	})
+
+	await models.CommunityPost.findAll({
+		where : {
+			IsShow : 1,
+			[Op.not] : { ImageURL2 : null},
+		}
+	}).then(result => {
+
+		for(var i = 0 ; i < result.length; ++i){
+			if(req.body.download == 0){
+				download('http://myvfdevbucket.s3.ap-northeast-2.amazonaws.com' + '/CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL2, './AllPhotos/CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL2, function(){
+					console.log('CommunityPhotos image done');
+				});
+			}else{
+				s3MulterPro.formidablePathUpload('./AllPhotos/CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL2, 'CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL2);
+			}
+		}
+	})
+
+	await models.CommunityPost.findAll({
+		where : {
+			IsShow : 1,
+			[Op.not] : { ImageURL3 : null},
+		}
+	}).then(result => {
+
+		for(var i = 0 ; i < result.length; ++i){
+			if(req.body.download == 0){
+				download('http://myvfdevbucket.s3.ap-northeast-2.amazonaws.com' + '/CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL3, './AllPhotos/CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL3, function(){
+					console.log('CommunityPhotos image done');
+				});
+			}else{
+				s3MulterPro.formidablePathUpload('./AllPhotos/CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL3, 'CommunityPhotos/' + result[i].id + '/' + result[i].ImageURL3);
+			}
+		}
+	})
+
+	res.status(200).send(true);
+});
