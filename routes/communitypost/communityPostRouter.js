@@ -189,9 +189,10 @@ router.post('/Select/Detail', async(req, res) => {
                                                                 limit : LIKES_LIMIT
                                                         }
                                                 ]
-                                        }
+                                        },
                                 ]
                         }).then(result => {
+
                                 res.status(200).send(result);
                         }).catch(err => {
                                 globalRouter.logger.error(URL + '/Select/Detail CommunityPostReply findAll Failed ' + err );
@@ -416,6 +417,18 @@ router.post('/Insert/Reply', async(req, res) => {
                         Contents : req.body.contents
                 }).then( async result => {
 
+                        //댓글 쓰면 구독 등록
+                        await models.CommunityPostSubscriber.findOrCreate({
+                                where: {
+                                        UserID : req.body.userID,
+                                        PostID : req.body.postID,
+                                },
+                                defaults: {
+                                        UserID : req.body.userID,
+                                        PostID : req.body.postID,
+                                }
+                        });
+
                         //FCM
                         await models.CommunityPostSubscriber.findAll({
                                 where : {
@@ -438,7 +451,7 @@ router.post('/Insert/Reply', async(req, res) => {
                                                  title : "새로운 댓글",
                                                  type : "POST_REPLY",
                                                  tableIndex : req.body.postID,
-                                                 subIndex : 0,
+                                                 subIndex : result.id,
                                                  body : user.NickName + "님이 댓글을 달았습니다.",
                                                  isSend : getAllRes.isOnline,
                                          })
@@ -466,7 +479,7 @@ router.post('/Insert/ReplyReply', require('../../controllers/verifyToken'), asyn
                         IsShow : 1
                 }
         })
-
+        
         if(globalRouter.IsEmpty(reply)){
                 res.status(404).send(null);
         }else{
@@ -480,57 +493,78 @@ router.post('/Insert/ReplyReply', require('../../controllers/verifyToken'), asyn
                 if(globalRouter.IsEmpty(replyPost)){
                         res.status(404).send(null);
                 }else{
-                        var user = await models.User.findOne({where: {UserID: req.body.userID}});
-
-                        //글 작성자와 댓글 작성자가 다르면
-                        if(req.body.userID != replyPost.UserID){
-                                var getAllResOne = await getallAsync(String(replyPost.UserID));
-
-                                if(getAllResOne != null) {
-                                        var data = JSON.stringify({
-                                                userID : req.body.userID,
-                                                targetID : replyPost.UserID,
-                                                title : "대댓글",
-                                                type : "POST_REPLY_REPLY",
-                                                tableIndex : reply.PostID,
-                                                body : user.NickName + "님이 대댓글을 달았습니다.",
-                                                isSend : getAllResOne.isOnline,
-                                        })
-                
-                                        //글 작성자 한테 fcm
-                                        if(fcmFuncRouter.SendFcmEvent( data )){
-                                        }else{
-                                                globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
-                                        }
-                                }
-                        }
-
                         await models.CommunityPostReplyReply.create({
                                 UserID : req.body.userID,
                                 ReplyID : req.body.replyID,
                                 Contents : req.body.contents
                         }).then(async result => {
-                                if(req.body.userID != reply.UserID){
-                                        var getAllResTwo = await getallAsync(String(reply.UserID));
+                                //대댓글 쓰면 구독 등록
+                                await models.CommunityPostSubscriber.findOrCreate({
+                                        where: {
+                                                UserID : req.body.userID,
+                                                PostID : reply.PostID,
+                                        },
+                                        defaults: {
+                                                UserID : req.body.userID,
+                                                PostID : reply.PostID,
+                                        }
+                                });
 
-                                        if(getAllResTwo == null) {
-                                                var data = JSON.stringify({
-                                                        userID : req.body.userID,
-                                                        targetID : reply.UserID,
-                                                        title : "대댓글",
-                                                        type : "POST_REPLY_REPLY",
-                                                        tableIndex : reply.PostID,
-                                                        subIndex : 0,
-                                                        body : user.NickName + "님이 대댓글을 달았습니다.",
-                                                        isSend : getAllResTwo.isOnline,
-                                                })
-                
-                                                //댓글 작성자한테 fcm
-                                                if(fcmFuncRouter.SendFcmEvent( data )){
-                                                }else{
-                                                        globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+                                var user = await models.User.findOne({where: {UserID: req.body.userID}});
+
+                                //글 작성자와 댓글 작성자가 다르면
+                                if(req.body.userID != replyPost.UserID){
+                                        var subscribe = await models.CommunityPostSubscriber.findOne({where : {UserID : replyPost.UserID}});
+
+                                        if(false == globalRouter.IsEmpty(subscribe)){
+                                                var getAllResOne = await getallAsync(String(replyPost.UserID));
+        
+                                                if(getAllResOne != null) {
+                                                        var data = JSON.stringify({
+                                                                userID : req.body.userID,
+                                                                targetID : replyPost.UserID,
+                                                                title : "대댓글",
+                                                                type : "POST_REPLY_REPLY",
+                                                                tableIndex : reply.PostID,
+                                                                subIndex : result.id,
+                                                                body : user.NickName + "님이 대댓글을 달았습니다.",
+                                                                isSend : getAllResOne.isOnline,
+                                                        })
+                                
+                                                        //글 작성자 한테 fcm
+                                                        if(fcmFuncRouter.SendFcmEvent( data )){
+                                                        }else{
+                                                                globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+                                                        }
                                                 }
-                                                
+                                        }
+                                }
+
+                                if(req.body.userID != reply.UserID){
+                                        var subscribe = await models.CommunityPostSubscriber.findOne({where : {UserID : reply.UserID}});
+
+                                        if(false == globalRouter.IsEmpty(subscribe)){
+                                                var getAllResTwo = await getallAsync(String(reply.UserID));
+
+                                                if(getAllResTwo != null) {
+                                                        var data = JSON.stringify({
+                                                                userID : req.body.userID,
+                                                                targetID : reply.UserID,
+                                                                title : "대댓글",
+                                                                type : "POST_REPLY_REPLY",
+                                                                tableIndex : reply.PostID,
+                                                                subIndex : result.id,
+                                                                body : user.NickName + "님이 대댓글을 달았습니다.",
+                                                                isSend : getAllResTwo.isOnline,
+                                                        })
+                        
+                                                        //댓글 작성자한테 fcm
+                                                        if(fcmFuncRouter.SendFcmEvent( data )){
+                                                        }else{
+                                                                globalRouter.logger.error(URL + '/Insert/ReplyReply CommunityPostReplyReply create Failed' + err);
+                                                        }
+                                                        
+                                                }
                                         }
                                 }
 

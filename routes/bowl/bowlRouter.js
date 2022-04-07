@@ -149,6 +149,7 @@ router.post('/Insert/Intake', async(req,res) => {
 
                                 //먹은양이 먹기시작 전보다 클 때만
                                 var amount = prev.Amount - eat.Amount;
+                                amount = amount.toFixed(2);
                                 if(amount > 0){
                                         var getAllRes = await getallAsync(String(pet.UserID));
 
@@ -169,16 +170,16 @@ router.post('/Insert/Intake', async(req,res) => {
                                                 })
 
                                                 if(fcmFuncRouter.SendFcmEvent(data)){
-                                                        console.log(URL + '/InsertOrModify POST_NEW_UPDATE fcm is true');
+                                                        console.log(URL + '/Insert/Intake PET_EAT_DONE fcm is true');
                                                 }else{
-                                                        console.log(URL + '/InsertOrModify POST_NEW_UPDATE fcm is false');
+                                                        console.log(URL + '/Insert/Intake PET_EAT_DONE fcm is false');
                                                 }
                                         }
                                 }
                         }
 
                         //무게와 양의 차이가 50이하일 때 state4가 아니고
-                        if(req.body.et != 4 &&  Math.abs(req.body.fa - req.body.bw) < 50){
+                        if(req.body.et == 3 &&  Math.abs(req.body.fa - req.body.bw) < 50){
                                 let fill = await models.Intake.findOne({
                                         where : {
                                                         PetID : req.body.pi,
@@ -223,9 +224,9 @@ router.post('/Insert/Intake', async(req,res) => {
                                                 })
 
                                                 if(fcmFuncRouter.SendFcmEvent(data)){
-                                                        console.log(URL + '/InsertOrModify POST_NEW_UPDATE fcm is true');
+                                                        console.log(URL + '/Insert/Intake PET_BOWL_IS_EMPTY fcm is true');
                                                 }else{
-                                                        console.log(URL + '/InsertOrModify POST_NEW_UPDATE fcm is false');
+                                                        console.log(URL + '/Insert/Intake PET_BOWL_IS_EMPTY fcm is false');
                                                 }
                                         }
                                 }

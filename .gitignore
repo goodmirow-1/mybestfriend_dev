@@ -6,4 +6,9 @@ logs/
 node_modules/
 package-lock.json/
 uploadedFiles/
+routes/global.js
+routes/multer.js
+routes/bowl/
 package.json
+app.js
+

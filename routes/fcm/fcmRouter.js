@@ -80,7 +80,7 @@ router.post('/Token/Save',async (req,res) => {
                 Advice : advice,
                 Community : community,
                 Marketing : marketing,
-                BadgeCount : badgeCount
+                BadgeCount : 0
             }
         ).then(function(result) {
             console.log(URL + "Token/Save Success" + result);

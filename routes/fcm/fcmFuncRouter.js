@@ -14,6 +14,7 @@ module.exports = {
                     where : {
                         UserID : data.targetID
                     },
+                    
                     order : [
                         ['id', 'DESC']
                     ]
@@ -46,8 +47,10 @@ module.exports = {
                                 break;
                         }
 
-                        if(data.type == "POST_LIKE" || data.type == "POST_REPLY" || data.type == "POST_REPLY_REPLY"){
+                        if(data.type == "POST_LIKE" || data.type == "POST_REPLY"){
                                 page = 'COMMUNITY';
+                        }else if(data.type == "POST_REPLY_REPLY"){
+                                page = 'COMMUNITY_REPLY_REPLY';
                         }else if(data.type == "PET_BOWL_IS_EMPTY" || data.type == "PET_EAT_DONE"){
                                 page = 'BOWL';
                         }
@@ -97,7 +100,7 @@ module.exports = {
                                 }
                         }
 
-                        admin.messaging().send(sendMsg)
+                        await admin.messaging().send(sendMsg)
                          .then( fcmResult => {
                                 result.update({BadgeCount : badgeCount});
                                 console.log('fcm send is success' + fcmResult);
