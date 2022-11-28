@@ -3,7 +3,7 @@
 .files/
 .keys/
 .logs/
-.node_modules/
+/node_modules/
 .package-lock.json/
 .uploadedFiles/
 .routes/global.js
