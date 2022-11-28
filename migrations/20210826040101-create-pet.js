@@ -63,7 +63,7 @@ module.exports = {
         defaultValue : 3784     //강아지 사료의 기본 kcal
       },
       FoodWater: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.DOUBLE,
         defaultValue : 0.12
       },
       FoodRecommendedIntake: {

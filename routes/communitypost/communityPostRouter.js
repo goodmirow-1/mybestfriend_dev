@@ -643,6 +643,7 @@ router.post('/InsertLike', async(req, res) => {
                                                 title : "게시글",
                                                 type : "POST_LIKE",
                                                 tableIndex : req.body.postID,
+                                                subIndex : 0,
                                                 body : user.NickName + "님이 좋아요 를 눌렀습니다.",
                                                 isSend : getAllRes.isOnline
                                         })  

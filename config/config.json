@@ -1,0 +1,27 @@
+{
+    "development": {
+      "username": "admin",
+      "password": "akdlqpvm1!",
+      "database": "myvef_development",
+      "host": "database-1.csjktq1tylhd.ap-northeast-2.rds.amazonaws.com",
+      "dialect": "mysql",
+      "timezone" : "+09:00"
+    },
+    "test": {
+      "username": "root",
+      "password": null,
+      "database": "database_test",
+      "host": "127.0.0.1",
+      "timezone" : "+09:00"
+    },
+    "production": {
+      "username": "admin",
+      "password": "akdlqpvm1!",
+      "database": "myvef_production",
+      "host": "database-1.csjktq1tylhd.ap-northeast-2.rds.amazonaws.com",
+      "dialect": "mysql",
+      "timezone" : "+09:00",
+      "logging" : false
+    }
+  }
+  

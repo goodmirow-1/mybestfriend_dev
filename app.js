@@ -310,8 +310,10 @@ app.post("/Fixed/FeedID", async( req, res) => {
 	})
 });
 
-var appVersion = "1.0.0";
+var appVersion = "1.0.1";
 app.post('/Check/AppVersion', async(req, res) => {
+	res.status(200).send(true);
+
 	if(req.body.version == appVersion){
 		res.status(200).send(true);
 	}else{
@@ -319,39 +321,263 @@ app.post('/Check/AppVersion', async(req, res) => {
 	}
 })
 
+var generateNumber = function(min, max) {
+    if(min > max) {
+        throw new Error('Minimum value should be smaller than maximum value.');
+    }
+    var range = max - min;
+    return min + range * Math.random();
+};
+
 app.post('/Test', async(req, res) => {
-	let fill = await models.Intake.findOne({
+	var petID = req.body.petID;
+	var bowlType = req.body.bowlType;
+	var bowlWeight = req.body.bowlWeight;
+
+	var lastEat = await models.Intake.findOne({
 		where : {
-				PetID : req.body.petID,
-				BowlType : req.body.bowlType,
-				State : 1
+			PetID : petID,
+			BowlType : bowlType,
 		},
-		order : [
-		['id', 'DESC']
-	],
+		order : [['id', 'DESC']]
 	});
 
-	let eat = await models.Intake.findOne({
-			where : {
-					PetID : req.body.petID,
-					BowlType : req.body.bowlType,
-					State : 3
-			},
-			order : [
-		['id', 'DESC']
-	],
-	});
-
-	//밥을 주기만 했으면
-	if(globalRouter.IsEmpty(eat)){
-			res.status(200).send(true);
-	}else{
-			var resData = {
-				"res" : (eat.Amount - eat.BowlWeight) / (fill.Amount - fill.BowlWeight)
-			}
-
-			res.status(200).send(resData);
+	//밥을 줘야함
+	if(globalRouter.IsEmpty(lastEat) || (lastEat.Amount < (bowlWeight + 50))){
+		lastEat = await models.Intake.create({
+			PetID : petID,
+			BowlWeight : bowlWeight,
+			Amount : generateNumber(330,400).toFixed(2),
+			BowlType : bowlType,
+			State : 1,
+			createdAt : req.body.datestr + ' 07:10:10',
+			updatedAt : req.body.datestr + ' 07:10:10'
+		}).then(result => {
+				console.log(URL + '/Insert/Intake Intake create Success');
+		}).catch(err => {
+				console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+		})
 	}
+	
+	//먹기 시작함
+	await models.Intake.create({
+		PetID : petID,
+		BowlWeight : bowlWeight,
+		Amount : lastEat.Amount,
+		BowlType : bowlType,
+		State : 2,
+		createdAt : req.body.datestr + ' 07:13:10',
+		updatedAt : req.body.datestr + ' 07:13:10'
+	}).then(result => {
+			console.log(URL + '/Insert/Intake Intake create Success');
+	}).catch(err => {
+			console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+	})
+
+	//다먹음
+	await models.Intake.create({
+		PetID : petID,
+		BowlWeight : bowlWeight,
+		Amount : (lastEat.Amount - generateNumber(30,80).toFixed(2)).toFixed(2),
+		BowlType : bowlType,
+		State : 3,
+		createdAt : req.body.datestr + ' 07:16:10',
+		updatedAt : req.body.datestr + ' 07:16:10'
+	}).then(result => {
+			console.log(URL + '/Insert/Intake Intake create Success');
+	}).catch(err => {
+			console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+	})
+
+	//밥을 줘야함
+	if(globalRouter.IsEmpty(lastEat) || (lastEat.Amount < (bowlWeight + 50))){
+		lastEat = await models.Intake.create({
+			PetID : petID,
+			BowlWeight : bowlWeight,
+			Amount : generateNumber(330,400).toFixed(2),
+			BowlType : bowlType,
+			State : 1,
+			createdAt : req.body.datestr + ' 11:30:10',
+			updatedAt : req.body.datestr + ' 11:30:10'
+		}).then(result => {
+				console.log(URL + '/Insert/Intake Intake create Success');
+		}).catch(err => {
+				console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+		})
+	}
+	
+	//먹기 시작함
+	await models.Intake.create({
+		PetID : petID,
+		BowlWeight : bowlWeight,
+		Amount : lastEat.Amount,
+		BowlType : bowlType,
+		State : 2,
+		createdAt : req.body.datestr + ' 11:33:10',
+		updatedAt : req.body.datestr + ' 11:33:10'
+	}).then(result => {
+			console.log(URL + '/Insert/Intake Intake create Success');
+	}).catch(err => {
+			console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+	})
+
+	//다먹음
+	await models.Intake.create({
+		PetID : petID,
+		BowlWeight : bowlWeight,
+		Amount : (lastEat.Amount - generateNumber(30,80).toFixed(2)).toFixed(2),
+		BowlType : bowlType,
+		State : 3,
+		createdAt : req.body.datestr + ' 11:36:10',
+		updatedAt : req.body.datestr + ' 11:36:10'
+	}).then(result => {
+			console.log(URL + '/Insert/Intake Intake create Success');
+	}).catch(err => {
+			console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+	})
+
+	//밥을 줘야함
+	if(globalRouter.IsEmpty(lastEat) || (lastEat.Amount < (bowlWeight + 50))){
+		lastEat = await models.Intake.create({
+			PetID : petID,
+			BowlWeight : bowlWeight,
+			Amount : generateNumber(330,400).toFixed(2),
+			BowlType : bowlType,
+			State : 1,
+			createdAt : req.body.datestr + ' 15:40:10',
+			updatedAt : req.body.datestr + ' 15:40:10'
+		}).then(result => {
+				console.log(URL + '/Insert/Intake Intake create Success');
+		}).catch(err => {
+				console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+		})
+	}
+	
+	//먹기 시작함
+	await models.Intake.create({
+		PetID : petID,
+		BowlWeight : bowlWeight,
+		Amount : lastEat.Amount,
+		BowlType : bowlType,
+		State : 2,
+		createdAt : req.body.datestr + ' 15:43:10',
+		updatedAt : req.body.datestr + ' 15:43:10'
+	}).then(result => {
+			console.log(URL + '/Insert/Intake Intake create Success');
+	}).catch(err => {
+			console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+	})
+
+	//다먹음
+	await models.Intake.create({
+		PetID : petID,
+		BowlWeight : bowlWeight,
+		Amount : (lastEat.Amount - generateNumber(30,80).toFixed(2)).toFixed(2),
+		BowlType : bowlType,
+		State : 3,
+		createdAt : req.body.datestr + ' 15:46:10',
+		updatedAt : req.body.datestr + ' 15:46:10'
+	}).then(result => {
+			console.log(URL + '/Insert/Intake Intake create Success');
+	}).catch(err => {
+			console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+	})
+
+	//밥을 줘야함
+	if(globalRouter.IsEmpty(lastEat) || (lastEat.Amount < (bowlWeight + 50))){
+		lastEat = await models.Intake.create({
+			PetID : petID,
+			BowlWeight : bowlWeight,
+			Amount : generateNumber(330,400).toFixed(2),
+			BowlType : bowlType,
+			State : 1,
+			createdAt : req.body.datestr + ' 19:30:10',
+			updatedAt : req.body.datestr + ' 19:30:10'
+		}).then(result => {
+				console.log(URL + '/Insert/Intake Intake create Success');
+		}).catch(err => {
+				console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+		})
+	}
+	
+	//먹기 시작함
+	await models.Intake.create({
+		PetID : petID,
+		BowlWeight : bowlWeight,
+		Amount : lastEat.Amount,
+		BowlType : bowlType,
+		State : 2,
+		createdAt : req.body.datestr + ' 19:33:10',
+		updatedAt : req.body.datestr + ' 19:33:10'
+	}).then(result => {
+			console.log(URL + '/Insert/Intake Intake create Success');
+	}).catch(err => {
+			console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+	})
+
+	//다먹음
+	await models.Intake.create({
+		PetID : petID,
+		BowlWeight : bowlWeight,
+		Amount : (lastEat.Amount - generateNumber(30,80).toFixed(2)).toFixed(2),
+		BowlType : bowlType,
+		State : 3,
+		createdAt : req.body.datestr + ' 19:36:10',
+		updatedAt : req.body.datestr + ' 19:36:10'
+	}).then(result => {
+			console.log(URL + '/Insert/Intake Intake create Success');
+	}).catch(err => {
+			console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+	})
+
+	//밥을 줘야함
+	if(globalRouter.IsEmpty(lastEat) || (lastEat.Amount < (bowlWeight + 50))){
+		lastEat = await models.Intake.create({
+			PetID : petID,
+			BowlWeight : bowlWeight,
+			Amount : generateNumber(330,400).toFixed(2),
+			BowlType : bowlType,
+			State : 1,
+			createdAt : req.body.datestr + ' 22:20:10',
+			updatedAt : req.body.datestr + ' 22:20:10'
+		}).then(result => {
+				console.log(URL + '/Insert/Intake Intake create Success');
+		}).catch(err => {
+				console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+		})
+	}
+	
+	//먹기 시작함
+	await models.Intake.create({
+		PetID : petID,
+		BowlWeight : bowlWeight,
+		Amount : lastEat.Amount,
+		BowlType : bowlType,
+		State : 2,
+		createdAt : req.body.datestr + ' 22:26:10',
+		updatedAt : req.body.datestr + ' 22:26:10'
+	}).then(result => {
+			console.log(URL + '/Insert/Intake Intake create Success');
+	}).catch(err => {
+			console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+	})
+
+	//다먹음
+	await models.Intake.create({
+		PetID : petID,
+		BowlWeight : bowlWeight,
+		Amount : (lastEat.Amount - generateNumber(30,80).toFixed(2)).toFixed(2),
+		BowlType : bowlType,
+		State : 3,
+		createdAt : req.body.datestr + ' 22:28:10',
+		updatedAt : req.body.datestr + ' 22:28:10'
+	}).then(result => {
+			console.log(URL + '/Insert/Intake Intake create Success');
+	}).catch(err => {
+			console.log(URL + '/Insert/Intake Intake create Failed ' + err);
+	})
+
+	res.status(200).send(true);
 });
 
 const models_pro = require('./models/index_pro');

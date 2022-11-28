@@ -5,6 +5,7 @@ const router = require('express').Router(),
 
 const s3Multer = require('../multer');
 const petFuncRouter = require('./petFuncRouter');
+const userFuncRouter = require('../user/userFuncRouter');
 const verify = require('../../controllers/parameterToken');
 
 const client = globalRouter.client;
@@ -252,6 +253,10 @@ router.post('/InsertOrModify', async(req, res) => {     //펫 수정
                                                         globalRouter.logger.error(URL + '/InsertOrModify PetPhoto create Failed ' + err);
                                                 })
                                         }
+
+                                        var resUser = await userFuncRouter.SelectWithPetByUserID(fields.get('userID'));
+
+                                        client.setex(resUser.Email, 3600,JSON.stringify(resUser));
         
                                         res.status(200).send(await petFuncRouter.SelectByID(result.id));
                                 }).catch(err => {
@@ -340,6 +345,10 @@ router.post('/InsertOrModify', async(req, res) => {     //펫 수정
                                                 }
                                         }
 
+                                        var resUser = await userFuncRouter.SelectWithPetByUserID(fields.get('userID'));
+
+                                        client.setex(resUser.Email, 3600,JSON.stringify(resUser));
+
                                         res.status(200).send(await petFuncRouter.SelectByID(fields.get('id')));
                                 }).catch(err => {
                                         globalRouter.logger.error(URL + '/InsertOrModify Pet update Failed ' + err);
@@ -389,7 +398,6 @@ router.post('/Insert/UserCustomFood', async(req, res) => {
         })
 
 })
-
 
 router.post('/Select/TodayIntake', async(req, res) => {
 
@@ -512,6 +520,39 @@ router.post('/Select/IntakeSnack', async(req, res) => {
         })
 })
 
+router.post('/Update/IntakeSnack',  async(req, res) => {
+        await models.IntakeSnack.update(
+                {
+                        SnackID : req.body.snackID,
+                        Amount : req.body.amount,
+                        Water : req.body.water,
+                        Calorie: req.body.calorie,
+                        Time : new Date(req.body.time)
+                },
+                {
+                where : { 
+                        id : req.body.id, 
+                }
+        }).then(result => {
+                res.status(200).send(result);
+        }).catch(err => {
+                globalRouter.logger.error(URL + '/Update/IntakeSnack IntakeSnack  update Failed ' + err);
+                res.status(404).send(null);
+        })
+});
+
+router.post('/Delete/IntakeSnack',  async(req, res) => {
+        await models.IntakeSnack.destroy({
+                where : { 
+                        id : req.body.id,
+                }}
+        ).then(result => {
+                res.status(200).send(true);
+        }).catch(err => {
+                globalRouter.logger.error(URL + '/Delete/IntakeSnack Destroy Failed' + err);
+                res.status(404).send(null);
+        })
+});
 
 router.post('/Select/IntakeDataTest', async(req, res) => {
         await models.Intake.findAll({

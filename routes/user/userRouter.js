@@ -31,26 +31,6 @@ router.post('/Select', async (req, res) => {
         where : {
             UserID : req.body.userID
         },
-        include : [
-            {
-                model : models.Pet,
-                required : true,
-                limit : 10,
-                order : [
-                        ['Index', 'ASC']
-                ],
-                include : [
-                    {
-                        model : models.PetPhoto,
-                        required : true,
-                        limit : 5,
-                        order : [
-                                ['Index', 'ASC']
-                        ]
-                    },
-                ]
-            }
-        ]
     }).then(result => {
         res.status(200).send(result);
     }).catch(err => {
@@ -362,185 +342,181 @@ router.post('/Insert/NeedInfo', async(req, res) => {
 })
 
 router.post('/DebugLogin', async(req, res) => {
-    await models.User.findOne({
-        where : {
-            Email : req.body.email
-        },
-        include : [
-            {
-                    model : models.Pet,
-                    required : true,
-                    limit: 99,
-                    order : [
-                        ['Index', 'ASC']
-                    ],
-                    include : [
-                        {
-                                model : models.PetPhoto,
-                                required : true,
-                                limit : 5,
-                                order : [
-                                                ['Index', 'ASC']
-                                ]
-                        },
-                        {
-                                model : models.BowlDeviceTable,
-                                required : true,
-                                limit : 2,  //밥그릇, 물그릇
-                                order : [
-                                                ['id', 'DESC']
-                                ],
-                                where : {
-                                    [Op.not] : { BowlWeight : 0},
-                                }
-                        },
-		            ]
-            }
-        ]
-    }).then(result => {
-            //로그인 정보가 없을 때
-        if(globalRouter.IsEmpty(result)){
-            res.status(200).send(null);
-            return;
-        }else{
-            const payload = {
-                Email : req.body.email
-            };
+    client.exists(req.body.email, async function(err, reply){
+        if(err) res.status(404).send(null);
 
-            const secret = tokenController.getSecret(ACCESS_TOKEN);
-            const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+        if(reply === 1){
+            client.get(req.body.email, async (err2, data) => {
+                if(err2) res.status(200).send(null);
+
+                var result = JSON.parse(data);
+
+                const payload = {
+                    Email : result.Email
+                };
+
+                const secret = tokenController.getSecret(ACCESS_TOKEN);
+                const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+            
+                const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+                const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+                console.log("refreshtoken:" + reftoken);
+
+                let value = {
+                    RefreshToken: reftoken 
+                }
+            
+                var resData = {
+                    result,
+                    AccessToken: token,
+                    RefreshToken: reftoken,
+                    AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
+                };
+
+                await models.User.update(value, {where : {"UserID" : result.UserID}}).then(result2 => {
+                    res.status(200).send(resData);
+                }).catch(err => {
+                    globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
+                    res.status(400).send(null);
+                })
+            });
+        }else {
+            await models.User.findOne({
+                where : {
+                    Email : req.body.email
+                },
+                include : [
+                    {
+                            model : models.Pet,
+                            required : true,
+                            limit: 99,
+                            order : [
+                                ['Index', 'ASC']
+                            ],
+                            include : [
+                                {
+                                        model : models.PetPhoto,
+                                        required : true,
+                                        limit : 5,
+                                        order : [
+                                                        ['Index', 'ASC']
+                                        ]
+                                },
+                                {
+                                        model : models.BowlDeviceTable,
+                                        required : true,
+                                        limit : 2,  //밥그릇, 물그릇
+                                        order : [
+                                                        ['id', 'DESC']
+                                        ],
+                                        where : {
+                                            [Op.not] : { BowlWeight : 0},
+                                        }
+                                },
+                            ]
+                    },
+                    {
+                        model : models.UserBan,
+                        required : false,
+                        order : [
+                            ['id', 'DESC']
+                        ]
+                    }
+                ]
+            }).then(result => {
+                //로그인 정보가 없을 때
+                if(globalRouter.IsEmpty(result)){
+                    res.status(200).send(null);
+                    return;
+                }else{
+                    client.setex(req.body.email, 3600,JSON.stringify(result));
+
+                    const payload = {
+                        Email : req.body.email
+                    };
         
-            const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
-            const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
-            console.log("refreshtoken:" + reftoken);
-
-            let value = {
-                RefreshToken: reftoken 
-              }
-          
-            var resData = {
-                result,
-                AccessToken: token,
-                RefreshToken: reftoken,
-                AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
-            };
-
-            result.update(value).then(result2 => {
-                res.status(200).send(resData);
+                    const secret = tokenController.getSecret(ACCESS_TOKEN);
+                    const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+                
+                    const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+                    const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+                    console.log("refreshtoken:" + reftoken);
+        
+                    let value = {
+                        RefreshToken: reftoken 
+                      }
+                  
+                    var resData = {
+                        result,
+                        AccessToken: token,
+                        RefreshToken: reftoken,
+                        AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
+                    };
+        
+                    result.update(value).then(result2 => {
+                        res.status(200).send(resData);
+                    }).catch(err => {
+                        globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
+                        res.status(400).send(null);
+                    })
+                }
             }).catch(err => {
-                globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
+                globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
                 res.status(400).send(null);
             })
         }
-    }).catch(err => {
-        globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
-        res.status(400).send(null);
-    })
+    });
 })
 
 router.post('/Login', async(req,res) => {
     const hashedPwd = crypto.createHmac('sha256', config.pwdsecret).update(req.body.password).digest('base64');
 
-    await models.User.findOne({
-        where: {
-            Email : req.body.email, //좌측에 있는 부분이 ..models/user.js 에 있는 변수명과 (테이블의 변수명과) 일치해야하는 부분이다.
-            Password : hashedPwd //우측에 있는 부분이 client 에서 전송되는 데이터 명으로, client 에서 보내는 변수명과 일치해야한다 
-        },
-        include : [
-            {
-                    model : models.Pet,
-                    required : true,
-                    order : [
-                                    ['Index', 'ASC']
-                    ],
-                    limit: 99,
-                    include : [
-                        {
-                                model : models.PetPhoto,
-                                required : true,
-                                limit : 5,
-                                order : [
-                                                ['Index', 'ASC']
-                                ]
-                        },
-                        {
-                                model : models.BowlDeviceTable,
-                                required : true,
-                                limit : 2,  //밥그릇, 물그릇
-                                order : [
-                                                ['id', 'DESC']
-                                ],
-                                where : {
-                                    [Op.not] : { BowlWeight : 0},
-                                }
-                        },
-		            ]
-            }
-        ]
-    }).then(async result => {
-        if(globalRouter.IsEmpty(result)){
-            res.status(200).send(null);
-        }else{
+    client.exists(req.body.email, async function(err, reply){
+        if(err) res.status(404).send(null);
 
-            var getAllRes = await getallAsync(String(result.UserID));
+        if( reply === 1){
+            client.get(req.body.email, async (err2, data) => {
+                if(err2) res.status(404).send(null);
 
-            if(getAllRes != null){
-                const resPassword = result.Password;
-    
-                if (resPassword == hashedPwd) { //들어온 비밀번호의 hased 버전이 테이블에 있는 비밀번호 값과 같으면 그다음 flow 로 넘어갈 수 있음
-                    const payload = {
-                        Email : req.body.email
-                    };
-                    const secret = tokenController.getSecret(ACCESS_TOKEN);
-                    const refsecret = tokenController.getSecret(REFRESH_TOKEN);
-    
-                    const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
-                    const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
-                    console.log("refreshtoken:" + reftoken);
-    
-                    const response = {
-                        result,
-                        AccessToken: token,
-                        RefreshToken: reftoken,
-                        AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
-                    }
-    
-                    console.log("WHAT  IS  RESULT.UserID   :",result.UserID)
-    
-                    models.User.update( //reftoken 값 update
-                    { RefreshToken: reftoken }
-                    , { where: { UserID: result.UserID } }
-                    ).then(result2 => {
+                var result = JSON.parse(data);
 
-                        client.hmset(String(result.UserID), {
-                            "isOnline" : 1,
-                        });
+                const payload = {
+                    Email : result.Email
+                };
 
-                        res.status(200).json(response);
-                    }).catch(err => {
-                        globalRouter.logger.error(err + "real error");
-                        res.status(400).send(null);
-                    })
-                }else{
-                    res.status(400).send(null);
+                const secret = tokenController.getSecret(ACCESS_TOKEN);
+                const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+            
+                const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+                const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+                console.log("refreshtoken:" + reftoken);
+
+                let value = {
+                    RefreshToken: reftoken 
                 }
-            }else{
-                res.status(400).send(null);
-            }
-        }
-    })
-})
+            
+                var resData = {
+                    result,
+                    AccessToken: token,
+                    RefreshToken: reftoken,
+                    AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
+                };
 
-router.post('/Login/Social', async(req, res) => {
-    if(globalRouter.IsEmpty(req.body.email)){
-        res.status(400).json(null);
-    }else{
-        await models.User.findOne({
-            where : {
-                Email : req.body.email,
-            },
-            include : [
-                {
+                await models.User.update(value, {where : {"UserID" : result.UserID}}).then(result2 => {
+                    res.status(200).send(resData);
+                }).catch(err => {
+                    globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
+                    res.status(400).send(null);
+                })
+            });
+        }else {
+            await models.User.findOne({
+                where : {
+                    Email : req.body.email,
+                    Password : hashedPwd
+                },
+                include : [
+                    {
                         model : models.Pet,
                         required : true,
                         limit: 99,
@@ -568,57 +544,189 @@ router.post('/Login/Social', async(req, res) => {
                                     }
                             },
                         ]
-                }
-            ]
-        }).then(async result => {
-            if(globalRouter.IsEmpty(result)){ //로그인 정보가 없으면
-                //필요에 따라 처리 필요함 (구글, 카톡, 애플)
-                res.status(200).send(null);
-            }else{
-                var getAllRes = await getallAsync(String(result.UserID));
+                    },
+                    {
+                        model : models.UserBan,
+                        required : false,
+                        order : [
+                            ['id', 'DESC']
+                        ]
+                    }
+                ]
+            }).then(result => {
+                    //로그인 정보가 없을 때
+                if(globalRouter.IsEmpty(result)){
+                    res.status(200).send(null);
+                    return;
+                }else{
+                    client.setex(req.body.email, 3600,JSON.stringify(result));
 
-                if(getAllRes != null){
                     const payload = {
                         Email : req.body.email
                     };
-            
+        
                     const secret = tokenController.getSecret(ACCESS_TOKEN);
                     const refsecret = tokenController.getSecret(REFRESH_TOKEN);
-        
+                
                     const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
                     const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
                     console.log("refreshtoken:" + reftoken);
-                    
-                    const response = {
-                        result: result,
+        
+                    let value = {
+                        RefreshToken: reftoken 
+                      }
+                  
+                    var resData = {
+                        result,
                         AccessToken: token,
                         RefreshToken: reftoken,
                         AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
-                    }
+                    };
         
-                    models.User.update( //reftoken 값 update
-                    { RefreshToken: reftoken }
-                    , { where: { UserID: result.UserID } }
-                    ).then(result2 => {
-
-                        client.hmset(String(result.UserID), {
-                            "isOnline" : 1,
-                        });            
-
-                        res.status(200).json(response);
+                    result.update(value).then(result2 => {
+                        res.status(200).send(resData);
                     }).catch(err => {
-                        globalRouter.logger.error(err + "real error");
+                        globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
                         res.status(400).send(null);
                     })
-                }else{
-                    res.status(400).send(null);
                 }
-            }
-        })
-    }
+            }).catch(err => {
+                globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
+                res.status(400).send(null);
+            })
+        }
+    });
 })
 
-router.post('/Logout', require('../../controllers/verifyToken'), async(req, res) => {
+router.post('/Login/Social', async(req, res) => {
+    client.exists(req.body.email, async function(err, reply){
+        if(err) res.status(404).send(null);
+
+        if( reply === 1){
+
+            client.get(req.body.email, async (err2, data) => {
+                if(err2) res.status(200).send(null);
+
+                var result = JSON.parse(data);
+
+                const payload = {
+                    Email : result.Email
+                };
+
+                const secret = tokenController.getSecret(ACCESS_TOKEN);
+                const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+            
+                const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+                const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+                console.log("refreshtoken:" + reftoken);
+
+                let value = {
+                    RefreshToken: reftoken 
+                }
+            
+                var resData = {
+                    result,
+                    AccessToken: token,
+                    RefreshToken: reftoken,
+                    AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
+                };
+
+                await models.User.update(value, {where : {"UserID" : result.UserID}}).then(result2 => {
+                    res.status(200).send(resData);
+                }).catch(err => {
+                    globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
+                    res.status(400).send(null);
+                })
+            });
+        }else {
+            await models.User.findOne({
+                where : {
+                    Email : req.body.email
+                },
+                include : [
+                    {
+                            model : models.Pet,
+                            required : true,
+                            limit: 99,
+                            order : [
+                                ['Index', 'ASC']
+                            ],
+                            include : [
+                                {
+                                        model : models.PetPhoto,
+                                        required : true,
+                                        limit : 5,
+                                        order : [
+                                                        ['Index', 'ASC']
+                                        ]
+                                },
+                                {
+                                        model : models.BowlDeviceTable,
+                                        required : true,
+                                        limit : 2,  //밥그릇, 물그릇
+                                        order : [
+                                                        ['id', 'DESC']
+                                        ],
+                                        where : {
+                                            [Op.not] : { BowlWeight : 0},
+                                        }
+                                },
+                            ]
+                    },
+                    {
+                        model : models.UserBan,
+                        required : false,
+                        order : [
+                            ['id', 'DESC']
+                        ]
+                    }
+                ]
+            }).then(result => {
+                    //로그인 정보가 없을 때
+                if(globalRouter.IsEmpty(result)){
+                    res.status(200).send(null);
+                    return;
+                }else{
+                    client.setex(req.body.email, 3600,JSON.stringify(result));
+
+                    const payload = {
+                        Email : req.body.email
+                    };
+        
+                    const secret = tokenController.getSecret(ACCESS_TOKEN);
+                    const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+                
+                    const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+                    const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+                    console.log("refreshtoken:" + reftoken);
+        
+                    let value = {
+                        RefreshToken: reftoken 
+                      }
+                  
+                    var resData = {
+                        result,
+                        AccessToken: token,
+                        RefreshToken: reftoken,
+                        AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
+                    };
+        
+                    result.update(value).then(result2 => {
+                        res.status(200).send(resData);
+                    }).catch(err => {
+                        globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
+                        res.status(400).send(null);
+                    })
+                }
+            }).catch(err => {
+                globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
+                res.status(400).send(null);
+            })
+        }
+    });
+})
+
+router.post('/Logout',  async(req, res) => {
     await models.FcmTokenList.destroy({
         where : {
             UserID : req.body.userID
@@ -767,8 +875,12 @@ router.post('/Edit/ProfileInfo', async(req,res) => {
                         })
                     }
                 }
+
+                var resUser = await userFuncRouter.SelectWithPetByUserID(fields.get('userID'));
+
+                client.setex(resUser.Email, 3600,JSON.stringify(resUser));
     
-                res.status(200).send(await userFuncRouter.SelectByUserID(fields.get('userID')));
+                res.status(200).send(resUser);
             }
         }
     }).on('error', function (err) { //에러나면, 파일저장 진행된 id 값의 폴더 하위부분을 날려버릴까?
@@ -917,5 +1029,46 @@ router.post('/Check/Token', async(req,res) => {
     res.status(200).send(resData);
 })
 
+router.get('/Select/BanList', async(req, res) => {
+    await models.UserBan.findAll({
+        where : {
+            UserID : req.body.userID
+        },
+    }).then(result => {
+        res.status(200).send(result);
+    }).catch(err => {
+        res.status(200).send(null);
+    })
+})
+
+router.post('/Insert/BanUser', async(req, res) => {
+    await models.UserBan.findOrCreate({
+        where : {
+            UserID : req.body.userID,
+            TargetID : req.body.targetID
+        },
+        defaults: {
+            UserID : req.body.userID,
+            TargetID : req.body.targetID
+        }
+    }).then(result => {
+        res.status(200).send(true);
+    }).catch(err => {
+        res.status(404).send(null);
+    })
+})
+
+router.post('/Delete/BanUser', async(req, res) => {
+    await models.UserBan.destroy({
+        where : {
+            UserID : req.body.userID,
+            TargetID : req.body.targetID
+        }
+    }).then(result => {
+        res.status(200).send(true);
+    }).catch(err => {
+        res.status(404).send(null);
+    })
+})
 
 module.exports = router;

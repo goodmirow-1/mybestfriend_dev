@@ -75,6 +75,9 @@ module.exports = (sequelize, DataTypes) => {
     this.hasMany(models.Pet, {
       foreignKey: 'UserID'
     });
+    this.hasMany(models.UserBan, {
+      foreignKey: 'UserID'
+    });
     this.hasMany(models.CommunityPost, {
       foreignKey: 'UserID'
     })

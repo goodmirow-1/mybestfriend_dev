@@ -1,14 +1,16 @@
-AllPhotos/
-config/
-files/
-keys/
-logs/
-node_modules/
-package-lock.json/
-uploadedFiles/
-routes/global.js
-routes/multer.js
-routes/bowl/
+.AllPhotos/
+.config/
+.files/
+.keys/
+.logs/
+.node_modules/
+.package-lock.json/
+.uploadedFiles/
+.routes/global.js
+.routes/multer.js
+.models/index.js
+.routes/bowl/bowlFuncRouter.js
 package.json
 app.js
+scheduler.js
 

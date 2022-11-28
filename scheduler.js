@@ -861,6 +861,11 @@ async function checkIntakes(){
     return job;
 }
 
+const models_pro = require('./models/index_pro');
+models_pro.sequelize.sync().then( () => {
+	console.log("Write pro DB Connect Success");
+});
+
 app.get('/Schedule/Do/CheckIntakes', async function(req, res) {
     // var job = await checkIntakes();
     
@@ -875,6 +880,7 @@ app.get('/Schedule/Do/CheckIntakes', async function(req, res) {
     await models.BowlDeviceTable.findAll({
         where : {
             [op.not] : { PetID : null},
+            [op.not] : { BowlWeight : 0.0}
         }
     }).then(async result => {
         console.log('/Schedule/Do/CheckIntakes BowlDeviceTables findAll is Success');
@@ -944,13 +950,15 @@ app.get('/Schedule/Do/CheckIntakes', async function(req, res) {
         })
     
         //test1@test.test , guks iphon mini
-        if(intakeInfo.userID == 73 || intakeInfo.userID == 136){
-            if(await fcmFuncRouter.SendFcmEvent( data )){
-                console.log('Schedule/Do/CheckIntakes fcm is true');
-            }else{
-                console.log('Schedule/Do/CheckIntakes fcm is failed');
-            }
-        }
+        // if(intakeInfo.userID == 73 || intakeInfo.userID == 136){
+        //     if(await fcmFuncRouter.SendFcmEvent( data )){
+        //         console.log('Schedule/Do/CheckIntakes fcm is true');
+        //     }else{
+        //         console.log('Schedule/Do/CheckIntakes fcm is failed');
+        //     }
+        // }
+
+        console.log(intakeInfo.userID);
     }
 
     res.status(200).send(true);

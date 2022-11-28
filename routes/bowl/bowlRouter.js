@@ -415,10 +415,10 @@ router.post('/Check/IntakeInfo', async(req, res) => {
                 }
         });
 
+        var resData = [];
         if(globalRouter.IsEmpty(bowlDevices)){
-                res.status(200).send(false);
+                res.status(200).send(resData);
         }else{
-                var resData = [];
                 for(var i = 0 ; i < bowlDevices.length ; ++i){
                         await models.Intake.findAll({
                                 where : {
@@ -436,15 +436,11 @@ router.post('/Check/IntakeInfo', async(req, res) => {
                                 }
                         }).catch(err => {
                                 globalRouter.logger.error(URL + '/Check/IntakeInfos findAll is Failed' + err);
-                                res.status(400).send(null);
+                                res.status(400).send(resData);
                         })
                 }
 
-                if(globalRouter.IsEmpty(resData)){
-                        res.status(200).send(false);
-                }else{
-                        res.status(200).send(true);
-                }
+                res.status(200).send(resData);
         }
 });
   
