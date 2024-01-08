@@ -342,260 +342,426 @@ router.post('/Insert/NeedInfo', async(req, res) => {
 })
 
 router.post('/DebugLogin', async(req, res) => {
-    client.exists(req.body.email, async function(err, reply){
-        if(err) res.status(404).send(null);
-
-        if(reply === 1){
-            client.get(req.body.email, async (err2, data) => {
-                if(err2) res.status(200).send(null);
-
-                var result = JSON.parse(data);
-
-                const payload = {
-                    Email : result.Email
-                };
-
-                const secret = tokenController.getSecret(ACCESS_TOKEN);
-                const refsecret = tokenController.getSecret(REFRESH_TOKEN);
-            
-                const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
-                const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
-                console.log("refreshtoken:" + reftoken);
-
-                let value = {
-                    RefreshToken: reftoken 
-                }
-            
-                var resData = {
-                    result,
-                    AccessToken: token,
-                    RefreshToken: reftoken,
-                    AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
-                };
-
-                await models.User.update(value, {where : {"UserID" : result.UserID}}).then(result2 => {
-                    res.status(200).send(resData);
-                }).catch(err => {
-                    globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
-                    res.status(400).send(null);
-                })
-            });
-        }else {
-            await models.User.findOne({
-                where : {
-                    Email : req.body.email
-                },
-                include : [
-                    {
-                            model : models.Pet,
-                            required : true,
-                            limit: 99,
-                            order : [
-                                ['Index', 'ASC']
-                            ],
-                            include : [
-                                {
-                                        model : models.PetPhoto,
-                                        required : true,
-                                        limit : 5,
-                                        order : [
-                                                        ['Index', 'ASC']
-                                        ]
-                                },
-                                {
-                                        model : models.BowlDeviceTable,
-                                        required : true,
-                                        limit : 2,  //밥그릇, 물그릇
-                                        order : [
-                                                        ['id', 'DESC']
-                                        ],
-                                        where : {
-                                            [Op.not] : { BowlWeight : 0},
-                                        }
-                                },
-                            ]
-                    },
-                    {
-                        model : models.UserBan,
-                        required : false,
-                        order : [
-                            ['id', 'DESC']
-                        ]
-                    }
+    await models.User.findOne({
+        where : {
+            Email : req.body.email
+        },
+        include : [
+            {
+                    model : models.Pet,
+                    required : true,
+                    limit: 99,
+                    order : [
+                        ['Index', 'ASC']
+                    ],
+                    include : [
+                        {
+                                model : models.PetPhoto,
+                                required : true,
+                                limit : 5,
+                                order : [
+                                                ['Index', 'ASC']
+                                ]
+                        },
+                        {
+                                model : models.BowlDeviceTable,
+                                required : true,
+                                limit : 2,  //밥그릇, 물그릇
+                                order : [
+                                                ['id', 'DESC']
+                                ],
+                                where : {
+                                    [Op.not] : { BowlWeight : 0},
+                                }
+                        },
+                    ]
+            },
+            {
+                model : models.UserBan,
+                required : false,
+                order : [
+                    ['id', 'DESC']
                 ]
-            }).then(result => {
-                //로그인 정보가 없을 때
-                if(globalRouter.IsEmpty(result)){
-                    res.status(200).send(null);
-                    return;
-                }else{
-                    client.setex(req.body.email, 3600,JSON.stringify(result));
+            }
+        ]
+    }).then(result => {
+        //로그인 정보가 없을 때
+        if(globalRouter.IsEmpty(result)){
+            res.status(200).send(null);
+            return;
+        }else{
+            client.setex(req.body.email, 3600,JSON.stringify(result));
 
-                    const payload = {
-                        Email : req.body.email
-                    };
+            const payload = {
+                Email : req.body.email
+            };
+
+            const secret = tokenController.getSecret(ACCESS_TOKEN);
+            const refsecret = tokenController.getSecret(REFRESH_TOKEN);
         
-                    const secret = tokenController.getSecret(ACCESS_TOKEN);
-                    const refsecret = tokenController.getSecret(REFRESH_TOKEN);
-                
-                    const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
-                    const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
-                    console.log("refreshtoken:" + reftoken);
-        
-                    let value = {
-                        RefreshToken: reftoken 
-                      }
-                  
-                    var resData = {
-                        result,
-                        AccessToken: token,
-                        RefreshToken: reftoken,
-                        AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
-                    };
-        
-                    result.update(value).then(result2 => {
-                        res.status(200).send(resData);
-                    }).catch(err => {
-                        globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
-                        res.status(400).send(null);
-                    })
-                }
+            const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+            const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+            console.log("refreshtoken:" + reftoken);
+
+            let value = {
+                RefreshToken: reftoken 
+              }
+          
+            var resData = {
+                result,
+                AccessToken: token,
+                RefreshToken: reftoken,
+                AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
+            };
+
+            result.update(value).then(result2 => {
+                res.status(200).send(resData);
             }).catch(err => {
-                globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
+                globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
                 res.status(400).send(null);
             })
         }
-    });
+    }).catch(err => {
+        globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
+        res.status(400).send(null);
+    })
+    // client.exists(req.body.email, async function(err, reply){
+    //     if(err) res.status(404).send(null);
+
+    //     if(reply === 1){
+    //         client.get(req.body.email, async (err2, data) => {
+    //             if(err2) res.status(200).send(null);
+
+    //             var result = JSON.parse(data);
+
+    //             const payload = {
+    //                 Email : result.Email
+    //             };
+
+    //             const secret = tokenController.getSecret(ACCESS_TOKEN);
+    //             const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+            
+    //             const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+    //             const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+    //             console.log("refreshtoken:" + reftoken);
+
+    //             let value = {
+    //                 RefreshToken: reftoken 
+    //             }
+            
+    //             var resData = {
+    //                 result,
+    //                 AccessToken: token,
+    //                 RefreshToken: reftoken,
+    //                 AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
+    //             };
+
+    //             await models.User.update(value, {where : {"UserID" : result.UserID}}).then(result2 => {
+    //                 res.status(200).send(resData);
+    //             }).catch(err => {
+    //                 globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
+    //                 res.status(400).send(null);
+    //             })
+    //         });
+    //     }else {
+    //         await models.User.findOne({
+    //             where : {
+    //                 Email : req.body.email
+    //             },
+    //             include : [
+    //                 {
+    //                         model : models.Pet,
+    //                         required : true,
+    //                         limit: 99,
+    //                         order : [
+    //                             ['Index', 'ASC']
+    //                         ],
+    //                         include : [
+    //                             {
+    //                                     model : models.PetPhoto,
+    //                                     required : true,
+    //                                     limit : 5,
+    //                                     order : [
+    //                                                     ['Index', 'ASC']
+    //                                     ]
+    //                             },
+    //                             {
+    //                                     model : models.BowlDeviceTable,
+    //                                     required : true,
+    //                                     limit : 2,  //밥그릇, 물그릇
+    //                                     order : [
+    //                                                     ['id', 'DESC']
+    //                                     ],
+    //                                     where : {
+    //                                         [Op.not] : { BowlWeight : 0},
+    //                                     }
+    //                             },
+    //                         ]
+    //                 },
+    //                 {
+    //                     model : models.UserBan,
+    //                     required : false,
+    //                     order : [
+    //                         ['id', 'DESC']
+    //                     ]
+    //                 }
+    //             ]
+    //         }).then(result => {
+    //             //로그인 정보가 없을 때
+    //             if(globalRouter.IsEmpty(result)){
+    //                 res.status(200).send(null);
+    //                 return;
+    //             }else{
+    //                 client.setex(req.body.email, 3600,JSON.stringify(result));
+
+    //                 const payload = {
+    //                     Email : req.body.email
+    //                 };
+        
+    //                 const secret = tokenController.getSecret(ACCESS_TOKEN);
+    //                 const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+                
+    //                 const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+    //                 const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+    //                 console.log("refreshtoken:" + reftoken);
+        
+    //                 let value = {
+    //                     RefreshToken: reftoken 
+    //                   }
+                  
+    //                 var resData = {
+    //                     result,
+    //                     AccessToken: token,
+    //                     RefreshToken: reftoken,
+    //                     AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
+    //                 };
+        
+    //                 result.update(value).then(result2 => {
+    //                     res.status(200).send(resData);
+    //                 }).catch(err => {
+    //                     globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
+    //                     res.status(400).send(null);
+    //                 })
+    //             }
+    //         }).catch(err => {
+    //             globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
+    //             res.status(400).send(null);
+    //         })
+    //     }
+    // });
 })
 
 router.post('/Login', async(req,res) => {
-    const hashedPwd = crypto.createHmac('sha256', config.pwdsecret).update(req.body.password).digest('base64');
-
-    client.exists(req.body.email, async function(err, reply){
-        if(err) res.status(404).send(null);
-
-        if( reply === 1){
-            client.get(req.body.email, async (err2, data) => {
-                if(err2) res.status(404).send(null);
-
-                var result = JSON.parse(data);
-
-                const payload = {
-                    Email : result.Email
-                };
-
-                const secret = tokenController.getSecret(ACCESS_TOKEN);
-                const refsecret = tokenController.getSecret(REFRESH_TOKEN);
-            
-                const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
-                const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
-                console.log("refreshtoken:" + reftoken);
-
-                let value = {
-                    RefreshToken: reftoken 
-                }
-            
-                var resData = {
-                    result,
-                    AccessToken: token,
-                    RefreshToken: reftoken,
-                    AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
-                };
-
-                await models.User.update(value, {where : {"UserID" : result.UserID}}).then(result2 => {
-                    res.status(200).send(resData);
-                }).catch(err => {
-                    globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
-                    res.status(400).send(null);
-                })
-            });
-        }else {
-            await models.User.findOne({
-                where : {
-                    Email : req.body.email,
-                    Password : hashedPwd
-                },
+    await models.User.findOne({
+        where : {
+            Email : req.body.email,
+        },
+        include : [
+            {
+                model : models.Pet,
+                required : true,
+                limit: 99,
+                order : [
+                    ['Index', 'ASC']
+                ],
                 include : [
                     {
-                        model : models.Pet,
-                        required : true,
-                        limit: 99,
-                        order : [
-                            ['Index', 'ASC']
-                        ],
-                        include : [
-                            {
-                                    model : models.PetPhoto,
-                                    required : true,
-                                    limit : 5,
-                                    order : [
-                                                    ['Index', 'ASC']
-                                    ]
-                            },
-                            {
-                                    model : models.BowlDeviceTable,
-                                    required : true,
-                                    limit : 2,  //밥그릇, 물그릇
-                                    order : [
-                                                    ['id', 'DESC']
-                                    ],
-                                    where : {
-                                        [Op.not] : { BowlWeight : 0},
-                                    }
-                            },
-                        ]
+                            model : models.PetPhoto,
+                            required : true,
+                            limit : 5,
+                            order : [
+                                            ['Index', 'ASC']
+                            ]
                     },
                     {
-                        model : models.UserBan,
-                        required : false,
-                        order : [
-                            ['id', 'DESC']
-                        ]
-                    }
+                            model : models.BowlDeviceTable,
+                            required : true,
+                            limit : 2,  //밥그릇, 물그릇
+                            order : [
+                                            ['id', 'DESC']
+                            ],
+                            where : {
+                                [Op.not] : { BowlWeight : 0},
+                            }
+                    },
                 ]
-            }).then(result => {
-                    //로그인 정보가 없을 때
-                if(globalRouter.IsEmpty(result)){
-                    res.status(200).send(null);
-                    return;
-                }else{
-                    client.setex(req.body.email, 3600,JSON.stringify(result));
+            },
+            {
+                model : models.UserBan,
+                required : false,
+                order : [
+                    ['id', 'DESC']
+                ]
+            }
+        ]
+    }).then(result => {
+            //로그인 정보가 없을 때
+        if(globalRouter.IsEmpty(result)){
+            res.status(200).send(null);
+            return;
+        }else{
+            client.setex(req.body.email, 3600,JSON.stringify(result));
 
-                    const payload = {
-                        Email : req.body.email
-                    };
+            const payload = {
+                Email : req.body.email
+            };
+
+            const secret = tokenController.getSecret(ACCESS_TOKEN);
+            const refsecret = tokenController.getSecret(REFRESH_TOKEN);
         
-                    const secret = tokenController.getSecret(ACCESS_TOKEN);
-                    const refsecret = tokenController.getSecret(REFRESH_TOKEN);
-                
-                    const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
-                    const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
-                    console.log("refreshtoken:" + reftoken);
-        
-                    let value = {
-                        RefreshToken: reftoken 
-                      }
-                  
-                    var resData = {
-                        result,
-                        AccessToken: token,
-                        RefreshToken: reftoken,
-                        AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
-                    };
-        
-                    result.update(value).then(result2 => {
-                        res.status(200).send(resData);
-                    }).catch(err => {
-                        globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
-                        res.status(400).send(null);
-                    })
-                }
+            const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+            const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+            console.log("refreshtoken:" + reftoken);
+
+            let value = {
+                RefreshToken: reftoken 
+              }
+          
+            var resData = {
+                result,
+                AccessToken: token,
+                RefreshToken: reftoken,
+                AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
+            };
+
+            result.update(value).then(result2 => {
+                res.status(200).send(resData);
             }).catch(err => {
-                globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
+                globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
                 res.status(400).send(null);
             })
         }
-    });
+    }).catch(err => {
+        globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
+        res.status(400).send(null);
+    })
+    // const hashedPwd = crypto.createHmac('sha256', config.pwdsecret).update(req.body.password).digest('base64');
+
+    // client.exists(req.body.email, async function(err, reply){
+    //     if(err) res.status(404).send(null);
+
+    //     if( reply === 1){
+    //         client.get(req.body.email, async (err2, data) => {
+    //             if(err2) res.status(404).send(null);
+
+    //             var result = JSON.parse(data);
+
+    //             const payload = {
+    //                 Email : result.Email
+    //             };
+
+    //             const secret = tokenController.getSecret(ACCESS_TOKEN);
+    //             const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+            
+    //             const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+    //             const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+    //             console.log("refreshtoken:" + reftoken);
+
+    //             let value = {
+    //                 RefreshToken: reftoken 
+    //             }
+            
+    //             var resData = {
+    //                 result,
+    //                 AccessToken: token,
+    //                 RefreshToken: reftoken,
+    //                 AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
+    //             };
+
+    //             await models.User.update(value, {where : {"UserID" : result.UserID}}).then(result2 => {
+    //                 res.status(200).send(resData);
+    //             }).catch(err => {
+    //                 globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
+    //                 res.status(400).send(null);
+    //             })
+    //         });
+    //     }else {
+    //         await models.User.findOne({
+    //             where : {
+    //                 Email : req.body.email,
+    //                 Password : hashedPwd
+    //             },
+    //             include : [
+    //                 {
+    //                     model : models.Pet,
+    //                     required : true,
+    //                     limit: 99,
+    //                     order : [
+    //                         ['Index', 'ASC']
+    //                     ],
+    //                     include : [
+    //                         {
+    //                                 model : models.PetPhoto,
+    //                                 required : true,
+    //                                 limit : 5,
+    //                                 order : [
+    //                                                 ['Index', 'ASC']
+    //                                 ]
+    //                         },
+    //                         {
+    //                                 model : models.BowlDeviceTable,
+    //                                 required : true,
+    //                                 limit : 2,  //밥그릇, 물그릇
+    //                                 order : [
+    //                                                 ['id', 'DESC']
+    //                                 ],
+    //                                 where : {
+    //                                     [Op.not] : { BowlWeight : 0},
+    //                                 }
+    //                         },
+    //                     ]
+    //                 },
+    //                 {
+    //                     model : models.UserBan,
+    //                     required : false,
+    //                     order : [
+    //                         ['id', 'DESC']
+    //                     ]
+    //                 }
+    //             ]
+    //         }).then(result => {
+    //                 //로그인 정보가 없을 때
+    //             if(globalRouter.IsEmpty(result)){
+    //                 res.status(200).send(null);
+    //                 return;
+    //             }else{
+    //                 client.setex(req.body.email, 3600,JSON.stringify(result));
+
+    //                 const payload = {
+    //                     Email : req.body.email
+    //                 };
+        
+    //                 const secret = tokenController.getSecret(ACCESS_TOKEN);
+    //                 const refsecret = tokenController.getSecret(REFRESH_TOKEN);
+                
+    //                 const token = tokenController.getToken(payload, secret, ACCESS_TOKEN);
+    //                 const reftoken = tokenController.getToken(payload, refsecret, REFRESH_TOKEN);
+    //                 console.log("refreshtoken:" + reftoken);
+        
+    //                 let value = {
+    //                     RefreshToken: reftoken 
+    //                   }
+                  
+    //                 var resData = {
+    //                     result,
+    //                     AccessToken: token,
+    //                     RefreshToken: reftoken,
+    //                     AccessTokenExpiredAt: (tokenController.getExpired(token)).toString(),
+    //                 };
+        
+    //                 result.update(value).then(result2 => {
+    //                     res.status(200).send(resData);
+    //                 }).catch(err => {
+    //                     globalRouter.logger.error(URL + '/DebugLogin User Update is failed' + err);
+    //                     res.status(400).send(null);
+    //                 })
+    //             }
+    //         }).catch(err => {
+    //             globalRouter.logger.error(URL + '/DebugLogin User findOne is Failed' + err);
+    //             res.status(400).send(null);
+    //         })
+    //     }
+    // });
 })
 
 router.post('/Login/Social', async(req, res) => {

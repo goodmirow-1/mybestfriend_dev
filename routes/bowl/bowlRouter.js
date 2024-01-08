@@ -50,7 +50,7 @@ router.post('/Register/Info', async(req, res) => {
         }
 })
 
-router.post('/Disconnect/Pet', require('../../controllers/verifyToken'), async(req, res) => {
+router.post('/Disconnect/Pet',  async(req, res) => {
 
         var bowl = await models_pro.BowlDeviceTable.findOne({
                 where : {id : req.body.id}
@@ -85,7 +85,7 @@ router.post('/Update/BowlWeight', async(req,res) => {
                         }
                 }
         ).then(result => {
-                res.status(200).send(result);
+                res.status(200).send(true);
         }).catch(err => {
                 globalRouter.logger.error(URL + '/Update/BowlWeight weight update Failed ' + err);
                 res.status(404).send(null);

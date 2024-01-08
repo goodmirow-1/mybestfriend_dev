@@ -182,6 +182,29 @@ router.post('/Delete',  require('../../controllers/verifyToken'), async(req, res
         }
 })
 
+router.post('/InsertOnlyData', async(req, res) => {
+        console.log(req.body);
+
+        await models.Pet.create(
+                {
+                        UserID : req.body.userID * 1,
+                        Index : req.body.index,
+                        Type : req.body.type,
+                        Name : req.body.name,
+                        Birthday : req.body.birthday,
+                        Kind : req.body.kind,
+                        Weight : req.body.weight,
+                        Sex : req.body.sex,
+                }
+        ).then( result => {
+
+                res.status(200).send(true);
+        }).catch(err => {
+                globalRouter.logger.error(URL + '/InsertOnlyData Pet create Failed ' + err);
+                res.status(400).send(null);
+        })
+})
+
 router.post('/InsertOrModify', async(req, res) => {     //펫 수정
 
         var fields = new Map();
